@@ -147,7 +147,7 @@ object App {
         joRoot.extract[StreamConfig]
       }
       case _ => {
-        throw SparkJobException("Cannot parse the JSON config file: ".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
+        throw new SparkJobException("Cannot parse the JSON config file: ".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
 
       }
     }

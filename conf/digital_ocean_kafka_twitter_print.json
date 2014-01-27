@@ -12,7 +12,7 @@
     "sources": [
         {
             "id": "twitter",
-            "classname": "com.ripjar.spark.process.source.Twitter",
+            "classname": "com.ripjar.spark.source.Twitter",
             "consumer_key": "K83RzMLoQMzZJ8rvz3eyjg",
             "consumer_secret": "rzrg8kSratsl8mic4higLHgnbUEqYfuGLANRLjLjWU",
             "access_token": "1013455706-RvN82iUMpnuzwpNVflgfw9cz7NtSJ3JybTLr4lB",
@@ -20,22 +20,24 @@
         },
         {
             "id": "kafka",
-            "classname": "com.ripjar.spark.process.source.Kafka",
+            "classname": "com.ripjar.spark.source.Kafka",
             "parameters": {
                 "topics": "kafka_trending.1",
                 "group": "kafka_trending.1",
                 "zkQuorum": "192.81.209.163:2181",
-                "numThreads": "2"
+                "numThreads": "2",
+                "binary": false
             }
         },
         {
             "id": "kafka-tweet",
-            "classname": "com.ripjar.spark.process.source.Kafka",
+            "classname": "com.ripjar.spark.source.Kafka",
             "parameters": {
                 "topics": "legacy.1",
                 "group": "legacy.1",
                 "zkQuorum": "192.81.209.163:2181",
-                "numThreads": "2"
+                "numThreads": "2",
+                "binary": false
             }
         }
     ],
@@ -60,7 +62,7 @@
             "classname": "com.ripjar.spark.process.LegacyFeatureEnrich"
         },
         {
-            "id": "enrich",
+            "id": "summarize",
             "classname": "com.ripjar.spark.process.Summariser"
         },
         {
@@ -74,14 +76,16 @@
             "processId": "trend",
             "parameters": {
                 "duration": "3600",
-                "slide_duration": "1"
+                "slide_duration": "1",
+                "split_on": " "
+                "match_on": "#"
             }
         },
         {
             "id": "trend_store",
             "processId": "trend_store",
             "parameters": {
-                "trend_file": "trending"
+                "file": "trending"
             }
         },
         {
@@ -92,12 +96,15 @@
             "id": "kafka_trend_store",
             "processId": "trend_store",
             "parameters": {
-                "trend_file": "kafka_trending"
+                "file": "kafka_trending"
             }
         },
         {
             "id": "enrich",
-            "processId": "enrich"
+            "processId": "enrich",
+            "parameters": {
+                "input": "tweet.text"
+            }
         },
         {
             "id": "summarize",
@@ -105,7 +112,12 @@
         },
         {
             "id": "elastic",
-            "processId": "elastic"
+            "processId": "elastic",
+            "parameters": {
+                "cluster": "localhost",
+                "index": "twitter",
+                "doctype": "tweet"
+            }
         }
     ],
     "flows": [

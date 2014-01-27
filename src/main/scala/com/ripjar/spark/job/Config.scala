@@ -4,7 +4,7 @@ abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) 
   def getMandatoryParameter(key: String): String = {
     parameters.get(key) match {
       case Some(x) => x
-      case None => throw SparkJobException("Missing: '%s'.".format(key), SparkJobErrorType.MandatoryParameterNotPresent)
+      case None => throw new SparkJobException("Missing: '%s', found: %s".format(key, parameters.mkString("[", ",", "]")), SparkJobErrorType.MandatoryParameterNotPresent)
     }
   }
 }
