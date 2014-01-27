@@ -6,6 +6,16 @@ import com.github.nscala_time.time.Imports.DateTime
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConversions._
+import java.util.{ Map => JMap }
+import java.util.{ List => JList }
+import java.lang.{ String => JString }
+import java.lang.{ Integer => JInteger }
+import java.lang.{ Float => JFloat }
+import java.lang.{ Double => JDouble }
+import java.lang.{ Boolean => JBoolean }
+import java.lang.{ Long => JLong }
+import java.lang.{ String => JString }
+import java.lang.{ Object => JObject }
 
 object DataItem {
   val logger = LoggerFactory.getLogger("DataObject")
@@ -44,6 +54,12 @@ object DataItem {
       case _ => new DataItem
     }
   }
+
+  def fromJava(jm: JMap[JString, JObject]): DataItem = {
+    val di = new DataItem
+    di.merge(jm)
+    di
+  }
 }
 
 //TODO: This interface gives the sort of functionality I think we want but performance may be an issue
@@ -53,6 +69,39 @@ class DataItem() extends Serializable {
 
   var raw: Array[Byte] = null
   private val valueMap = new HashMap[String, Any]
+
+  def merge(jmap: JMap[JString, JObject]) {
+    jmap.entrySet().foreach(entry => {
+      entry.getValue() match {
+        case s: JString => put(entry.getKey, s)
+        case i: JInteger => put(entry.getKey, i.intValue)
+        case f: JFloat => put(entry.getKey, f.floatValue)
+        case d: JDouble => put(entry.getKey, d.doubleValue)
+        case b: JBoolean => put(entry.getKey, b.booleanValue)
+        case l: JLong => put(entry.getKey, l.longValue)
+        case m: JMap[JString, JObject] => {
+          valueMap.get(entry.getKey) match {
+            case Some(sm: DataItem) => sm.merge(m)
+            case Some(_) => {
+              DataItem.logger.info("Changing type on: %s".format(entry.getKey))
+              put(entry.getKey, DataItem.fromJava(m))
+            }
+            case None => {
+              put(entry.getKey, DataItem.fromJava(m))
+            }
+          }
+        }
+        case l: JList[JString] => put(entry.getKey, new StringList(l.map(_.toString).toList))
+        case l: JList[JInteger] => put(entry.getKey, new LongList(l.map(_.intValue.toLong).toList))
+        case l: JList[JFloat] => put(entry.getKey, new DoubleList(l.map(_.floatValue.toDouble).toList))
+        case l: JList[JDouble] => put(entry.getKey, new DoubleList(l.map(_.doubleValue).toList))
+        case l: JList[JBoolean] => put(entry.getKey, new BooleanList(l.map(_.booleanValue).toList))
+        case l: JList[JLong] => put(entry.getKey, new LongList(l.map(_.longValue).toList))
+        case l: JList[JMap[JString, JObject]] => put(entry.getKey, new DataItemList(l.map(jm => DataItem.fromJava(jm)).toList))
+        case _ => throw new RuntimeException("Not implmented DataObject mapping from type during merge: " + entry.getValue.getClass.getName)
+      }
+    })
+  }
 
   def getMap(): Map[String, Any] = {
     valueMap.toMap

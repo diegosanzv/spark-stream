@@ -8,7 +8,10 @@ import com.ripjar.product.orac.analytic.FeatureExtraction
 import com.ripjar.product.orac.analytic.process.FeatureProcessor
 import scala.collection.JavaConversions
 import com.ripjar.spark.job.Instance
-
+import java.util.{ Map => JMap }
+import java.util.{ HashMap => JHashMap }
+import java.lang.{ String => JString }
+import java.lang.{ Object => JObject }
 
 /*
  * Performs feature enrichment on the stream
@@ -52,34 +55,30 @@ class LegacyFeatureEnrich(config: Instance) extends Processor with Serializable 
 
   val defaultTextPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
   val taskTextPath = DataItem.toPathElements("task.enrich.field")
- 
+
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(enrich(_))
   }
 
   def enrich(item: DataItem): DataItem = {
-    val textOption : Option[String] = item.getTyped[String](taskTextPath) match {
+    val textOption: Option[String] = item.getTyped[String](taskTextPath) match {
       case Some(path) => {
         item.getTyped[String](DataItem.toPathElements(path))
       }
-      case _ =>  item.getTyped[String](defaultTextPath)
+      case _ => item.getTyped[String](defaultTextPath)
     }
-    
+
     textOption match {
       case Some(value: String) => {
-        val lm: java.util.Map[java.lang.String, java.lang.Object] = new java.util.HashMap[java.lang.String, java.lang.Object]()
+        val lm: JMap[JString, JObject] = new JHashMap[JString, JObject]()
         lm.put("message", value)
         LegacyFeatureEnrich.getFeatureProcessor.process(lm)
-
-        //TODO - merge to the DI - currently a map of maps
-        val md = lm.get(FeatureExtraction.FEATURES_TAG)
-        val tran = lm.get(FeatureExtraction.TRANSIENT_TAG)
+        lm.remove("message")
+        item.merge(lm)
       }
       case _ => //Do nothing
     }
-    
-    
-    
+
     item
   }
 }
