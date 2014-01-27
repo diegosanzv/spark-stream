@@ -25,23 +25,29 @@ import com.ripjar.spark.process.Processor
 object Kafka {
   val logger = LoggerFactory.getLogger(classOf[Kafka])
 
-  var producer: Producer[String, Array[Byte]] = null
-  var lock = ""
+  var produces: Map[String, Producer[String, Array[Byte]]] = Map.empty
 
   def getProducer(broker: String): Producer[String, Array[Byte]] = {
-    if (producer == null) {
-      lock.synchronized {
-        if (producer == null) {
-          val prodProps = new Properties()
-          prodProps.put("metadata.broker.list", broker)
-          prodProps.put("serializer.class", "kafka.serializer.DefaultEncoder")
+    produces.get(broker) match {
+      case Some(c) => c
+      case None => {
+        produces.synchronized {
+          produces.get(broker) match {
+            case Some(c) => c
+            case None => {
+              val prodProps = new Properties()
+              prodProps.put("metadata.broker.list", broker)
+              prodProps.put("serializer.class", "kafka.serializer.DefaultEncoder")
 
-          val config = new ProducerConfig(prodProps)
-          producer = new Producer[String, Array[Byte]](config)
+              val config = new ProducerConfig(prodProps)
+              val producer = new Producer[String, Array[Byte]](config)
+              produces += ((broker, producer))
+              producer
+            }
+          }
         }
       }
     }
-    producer
   }
 }
 

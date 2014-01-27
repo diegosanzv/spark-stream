@@ -7,9 +7,14 @@ import org.apache.spark.streaming.dstream.DStream
 import java.util.Properties
 import kafka.producer._
 import com.ripjar.spark.job.Instance
+import com.mongodb.MongoOptions
+import com.mongodb.WriteConcern
+import com.mongodb.DBCollection
+import com.mongodb.DBObject
+import com.mongodb.util.JSON
 
 /*
- * Used to put a stream back onto kafka
+ * Used to store a stream in Mongo
  * 
  * Config parameters: 
  *  	brokers
@@ -21,51 +26,57 @@ import com.ripjar.spark.job.Instance
  * The tasks route overloads the default route
  */
 //TODO: Test
-object KafkaStorage {
-  val logger = LoggerFactory.getLogger(classOf[KafkaStorage])
+object Mongo {
+  val logger = LoggerFactory.getLogger(classOf[Mongo])
 
-  var producer: Producer[String, Array[Byte]] = null
-  var lock = ""
+  var collections: Map[String, DBCollection] = Map.empty
 
-  def getProducer(broker: String): Producer[String, Array[Byte]] = {
-    if (producer == null) {
-      lock.synchronized {
-        if (producer == null) {
-          val prodProps = new Properties()
-          prodProps.put("metadata.broker.list", broker)
-          prodProps.put("serializer.class", "kafka.serializer.DefaultEncoder")
-
-          val config = new ProducerConfig(prodProps)
-          producer = new Producer[String, Array[Byte]](config)
+  def getDBCollection(config: MongoConfig): DBCollection = {
+    collections.get(config.hash) match {
+      case Some(c) => c
+      case None => {
+        collections.synchronized {
+          collections.get(config.hash) match {
+            case Some(c) => c
+            case None => {
+              val mo = new MongoOptions()
+              mo.connectionsPerHost = config.connectionsPerHost
+              mo.threadsAllowedToBlockForConnectionMultiplier = config.threadsAllowedToBlockForConnectionMultiplier
+              val mongoDB = new com.mongodb.Mongo(config.mongoHost, mo).getDB(config.mongoDbName)
+              val collection = mongoDB.getCollection(config.mongoCollectionName)
+              val concern = WriteConcern.NORMAL
+              concern.continueOnErrorForInsert(true)
+              collection.setWriteConcern(concern)
+              collections += ((config.hash, collection))
+              collection
+            }
+          }
         }
       }
     }
-    producer
   }
 }
 
-class KafkaStorage(config: Instance) extends Processor with Serializable {
+class MongoConfig(val mongoHost: String, val mongoDbName: String, val mongoCollectionName: String, val connectionsPerHost: Int, val threadsAllowedToBlockForConnectionMultiplier: Int) {
+  val hash = mongoHost + ":" + mongoDbName + ":" + mongoCollectionName + ":" + connectionsPerHost + ":" + threadsAllowedToBlockForConnectionMultiplier
+}
 
-  val route: String = config.getMandatoryParameter("route")
-  val brokers: String = config.getMandatoryParameter("brokers")
-  val taskRoutePath = DataItem.toPathElements("task.kafka.route")
+class Mongo(config: Instance) extends Processor with Serializable {
+
+  val mongoConfig = new MongoConfig(
+    config.getMandatoryParameter("host"),
+    config.getMandatoryParameter("db"),
+    config.getMandatoryParameter("collection"),
+    10,
+    100)
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(store(_))
   }
 
   def store(input: DataItem): DataItem = {
-    val data = input.toString.getBytes()
-
-    val r = input.getTyped[String](taskRoutePath) match {
-      case Some(p) => p
-      case _ => route
-    }
-
-    val km = new KeyedMessage[String, Array[Byte]](r, data)
-    val messages1 = Array[KeyedMessage[String, Array[Byte]]](km)
-    KafkaStorage.getProducer(brokers).send(messages1: _*)
-
+    val dbObject = JSON.parse(input.toString).asInstanceOf[DBObject]
+    Mongo.getDBCollection(mongoConfig).save(dbObject)
     input
   }
 

@@ -9,13 +9,8 @@ abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) 
   }
 }
 
-case class IngestConfig(
-  val id: String,
-  val ingestType: String,
-  override val parameters: Map[String, String],
-  val datasets: Array[String]) extends AbstractParameterizedConfig(parameters) {}
-
-case class StreamConfig(val client: String,
+case class StreamConfig(
+  val client: String,
   val api: String,
   val id: String,
   val task_name: String,
@@ -31,14 +26,15 @@ case class StreamConfig(val client: String,
 case class ProcessorCfg(val id: String,
   val classname: String,
   val jar: String,
-  val parameters: Map[String, String],
-  val datasets: Array[String]) {}
+  val datasets: Array[String],
+  override val parameters: Map[String, String]) extends AbstractParameterizedConfig(parameters) {}
 
+//An instance of a processor
 case class Instance(val id: String,
   val processId: String,
   override val parameters: Map[String, String]) extends AbstractParameterizedConfig(parameters) {}
 
-
+//TODO: How would we specify a tee
 case class Flow(val id: String,
   val sequence: Array[String]) {}
 

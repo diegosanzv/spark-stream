@@ -15,7 +15,7 @@ import scala.Array.canBuildFrom
  * Created by mike on 1/22/14.
  */
 
-object KafkaSource {
+object Kafka {
 
   def parseBinaryInput(raw: Array[Byte]): DataItem = {
     val pr = ProcessRequestSerializer.inflate(raw, true)
@@ -32,7 +32,7 @@ object KafkaSource {
 
 }
 
-class KafkaSource(config: SourceCfg, ssc: StreamingContext) extends Source {
+class Kafka(config: SourceCfg, ssc: StreamingContext) extends Source {
 
   val group = config.getMandatoryParameter("group")
   val zkQuorum = config.getMandatoryParameter("zkQuorum")
@@ -52,12 +52,12 @@ class KafkaSource(config: SourceCfg, ssc: StreamingContext) extends Source {
     if (isBinaryStream) {
       val stream: DStream[(String, Array[Byte])] = KafkaUtils.createStream[String, Array[Byte], StringDecoder, DefaultDecoder](ssc, kafkaParams, topicpMap, StorageLevel.MEMORY_ONLY_SER_2)
       stream.map(input => {
-        KafkaSource.parseBinaryInput(input._2)
+        Kafka.parseBinaryInput(input._2)
       })
     } else {
       val stream: DStream[(String, String)] = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicpMap, StorageLevel.MEMORY_ONLY_SER_2)
       stream.map(input => {
-        KafkaSource.parseTextInput(input._2)
+        Kafka.parseTextInput(input._2)
       })
     }
 

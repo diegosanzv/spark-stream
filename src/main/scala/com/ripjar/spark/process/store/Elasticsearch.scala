@@ -10,7 +10,7 @@ import com.ripjar.spark.job.Instance
 import org.apache.spark.streaming.dstream.DStream
 import com.ripjar.spark.data._
 import com.ripjar.spark.process.Processor
-
+import org.elasticsearch.action.index.IndexRequestBuilder
 
 /*
  * Stores the output in elasticsearch
@@ -23,29 +23,44 @@ import com.ripjar.spark.process.Processor
  *      }	 	
  *
  */
-// TODO: Handle timeouts / failures
+// TODO: Test
 object Elasticsearch {
   val logger = LoggerFactory.getLogger(classOf[Elasticsearch])
 
-  var client: Client = null
+  var indexes: Map[String, IndexRequestBuilder] = Map.empty
 
-  def getClient(cluster: String): Client = {
-    if (client == null) {
-      client.synchronized {
-        if (client == null) {
-
-          val node = nodeBuilder().clusterName(cluster).client(true).node()
-          client = node.client()
+  def getIndex(elasticConfig: ElasticsearchConfig): IndexRequestBuilder = {
+    indexes.get(elasticConfig.hash) match {
+      case Some(c) => c
+      case None => {
+        indexes.synchronized {
+          indexes.get(elasticConfig.hash) match {
+            case Some(c) => c
+            case None => {
+              val node = nodeBuilder().clusterName(elasticConfig.cluster).client(true).node()
+              val client = node.client()
+              val index = client.prepareIndex(elasticConfig.index, elasticConfig.doctype)
+              indexes += ((elasticConfig.hash, index))
+              index
+            }
+          }
         }
       }
     }
-    client
   }
+
+}
+
+class ElasticsearchConfig(val cluster: String, val index: String, val doctype: String) {
+  val hash = cluster + ":" + index + ":" + doctype
 }
 
 class Elasticsearch(config: Instance) extends Processor with Serializable {
 
-  val cluster: String = config.getMandatoryParameter("cluster")
+  val elasticConfig = new ElasticsearchConfig(
+    config.getMandatoryParameter("cluster"),
+    config.getMandatoryParameter("index"),
+    config.getMandatoryParameter("doctype"))
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(store(_))
@@ -53,9 +68,8 @@ class Elasticsearch(config: Instance) extends Processor with Serializable {
 
   def store(input: DataItem): DataItem = {
     val json: String = input.toString
-//TODO - Complete    Elasticsearch.getClient(cluster).update(request)
 
-
+    Elasticsearch.getIndex(elasticConfig).setSource(json).execute()
     input
   }
 

@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 
  */
 
-class TwitterSource(val config: SourceCfg, val ssc: StreamingContext) extends Source {
+class Twitter(val config: SourceCfg, val ssc: StreamingContext) extends Source {
 
   val logger = LoggerFactory.getLogger("TwitterSource")
   val conf = ConfigFactory.load()
