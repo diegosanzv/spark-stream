@@ -15,11 +15,16 @@ import org.elasticsearch.action.index.IndexRequestBuilder
 /*
  * Stores the output in elasticsearch
  * 
- * Config parameters: 
+ * Config parameters:
+ * 		cluster
+ *   	index
+ *    	doctype
+ *   	 
  * 
  * Task parameters:
  * 		"store": {
- *   		"index": "client/project"
+ *   		"index": "client-project",
+ *     		"doctype": "doctype"
  *      }	 	
  *
  */
