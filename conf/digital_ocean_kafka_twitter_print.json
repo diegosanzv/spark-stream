@@ -1,76 +1,140 @@
 {
     "client": "client_key",
     "api": "api_key",
-    "id": "client_key-api_key-tweet-print",
+    "id": "test-routes",
     "task_name": "tweet-print",
     "spark_master": "local",
     "spark_home": "../../incubator-spark/",
-    "stream_duration" : 1,
+    "stream_duration": 1,
     "jars": [
         "./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
     ],
-
     "sources": [
         {
+            "id": "twitter",
+            "classname": "com.ripjar.spark.process.source.Twitter",
+            "consumer_key": "K83RzMLoQMzZJ8rvz3eyjg",
+            "consumer_secret": "rzrg8kSratsl8mic4higLHgnbUEqYfuGLANRLjLjWU",
+            "access_token": "1013455706-RvN82iUMpnuzwpNVflgfw9cz7NtSJ3JybTLr4lB",
+            "access_token_secret": "5lG7wWw9ekOHiOrK7BvMa0t2bLiA0nMVrlx806pHsc"
+        },
+        {
             "id": "kafka",
-            "classname": "com.ripjar.spark.process.KafkaSource",
-
+            "classname": "com.ripjar.spark.process.source.Kafka",
             "parameters": {
-                "topics": "tweets.1",
-                "group": "group1",
+                "topics": "kafka_trending.1",
+                "group": "kafka_trending.1",
+                "zkQuorum": "192.81.209.163:2181",
+                "numThreads": "2"
+            }
+        },
+        {
+            "id": "kafka-tweet",
+            "classname": "com.ripjar.spark.process.source.Kafka",
+            "parameters": {
+                "topics": "legacy.1",
+                "group": "legacy.1",
                 "zkQuorum": "192.81.209.163:2181",
                 "numThreads": "2"
             }
         }
     ],
-
-    "flows": [
-        {
-            "id": "unfiltered_trending",
-            "sequence": ["twitter", "trend", "trend_store"]
-        },
-
-        {
-            "id": "kafka_trending",
-            "sequence": ["kafka", "trend", "trend_store"]
-        }
-    ],
-
     "processors": [
         {
             "id": "trend",
-            "classname": "com.ripjar.spark.process.TrendingProcessor",
-            "jar": "/path/to/jar.jar",
+            "classname": "com.ripjar.spark.process.Trending",
             "parameters": {
-                "input": "status",
+                "input": "status"
             }
         },
         {
             "id": "trend_store",
-            "classname": "com.ripjar.spark.process.TrendingStorage"
-            "jar": "/path/to/jar.jar",
-            "parameters": {
-                "print" : "true"
-            }
+            "classname": "com.ripjar.spark.process.store.File"
+        },
+        {
+            "id": "log",
+            "classname": "com.ripjar.spark.process.Log"
+        },
+        {
+            "id": "enrich",
+            "classname": "com.ripjar.spark.process.LegacyFeatureEnrich"
+        },
+        {
+            "id": "enrich",
+            "classname": "com.ripjar.spark.process.Summariser"
+        },
+        {
+            "id": "elastic",
+            "classname": "com.ripjar.spark.process.store.Elasticsearch"
         }
     ],
-
     "instances": [
         {
             "id": "trend",
             "processId": "trend",
             "parameters": {
                 "duration": "3600",
-                "slide_duration" : "1"
+                "slide_duration": "1"
             }
         },
         {
             "id": "trend_store",
             "processId": "trend_store",
             "parameters": {
-                "print" : "true",
-                "trend_file" : "trending"
+                "trend_file": "trending"
             }
+        },
+        {
+            "id": "log",
+            "processId": "log"
+        },
+        {
+            "id": "kafka_trend_store",
+            "processId": "trend_store",
+            "parameters": {
+                "trend_file": "kafka_trending"
+            }
+        },
+        {
+            "id": "enrich",
+            "processId": "enrich"
+        },
+        {
+            "id": "summarize",
+            "processId": "summarize"
+        },
+        {
+            "id": "elastic",
+            "processId": "elastic"
+        }
+    ],
+    "flows": [
+        {
+            "id": "unfiltered_trending",
+            "sequence": [
+                "twitter",
+                "trend",
+                "log",
+                "trend_store"
+            ]
+        },
+        {
+            "id": "kafka_trending",
+            "sequence": [
+                "kafka",
+                "trend",
+                "log",
+                "kafka_trend_store"
+            ]
+        },
+        {
+            "id": "legacy",
+            "sequence": [
+                "kafka-tweet",
+                "enrich",
+                "summarize",
+                "elastic"
+            ]
         }
     ]
 }
