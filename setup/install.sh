@@ -1,0 +1,5 @@
+mvn install:install-file -DgroupId=org.apache.spark -DartifactId=spark-core_2.10 -Dversion=0.9.0-incubating-SNAPSHOT -Dpackaging=jar -DgeneratePom=true -Dfile=../../incubator-spark/core/target/scala-2.10/spark-core_2.10-0.9.0-incubating-SNAPSHOT.jar
+mvn install:install-file -DgroupId=org.apache.spark -DartifactId=spark-streaming_2.10 -Dversion=0.9.0-incubating-SNAPSHOT -Dpackaging=jar -DgeneratePom=true -Dfile=../../incubator-spark/streaming/target/scala-2.10/spark-streaming_2.10-0.9.0-incubating-SNAPSHOT.jar
+mvn install:install-file -DgroupId=org.apache.spark -DartifactId=spark-streaming-kafka_2.10 -Dversion=0.9.0-incubating-SNAPSHOT -Dpackaging=jar -DgeneratePom=true -Dfile=../../incubator-spark/external/kafka/target/scala-2.10/spark-streaming-kafka_2.10-0.9.0-incubating-SNAPSHOT.jar
+mvn install:install-file -DgroupId=org.apache.spark -DartifactId=spark-streaming-twitter_2.10 -Dversion=0.9.0-incubating-SNAPSHOT -Dpackaging=jar -DgeneratePom=true -Dfile=../../incubator-spark/external/twitter/target/scala-2.10/spark-streaming-twitter_2.10-0.9.0-incubating-SNAPSHOT.jar
+

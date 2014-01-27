@@ -1,0 +1,76 @@
+{
+    "client": "client_key",
+    "api": "api_key",
+    "id": "client_key-api_key-tweet-print",
+    "task_name": "tweet-print",
+    "spark_master": "local",
+    "spark_home": "../../incubator-spark/",
+    "stream_duration" : 1,
+    "jars": [
+        "./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
+    ],
+
+    "sources": [
+        {
+            "id": "kafka",
+            "classname": "com.ripjar.spark.process.KafkaSource",
+
+            "parameters": {
+                "topics": "tweets.1",
+                "group": "group1",
+                "zkQuorum": "192.81.209.163:2181",
+                "numThreads": "2"
+            }
+        }
+    ],
+
+    "flows": [
+        {
+            "id": "unfiltered_trending",
+            "sequence": ["twitter", "trend", "trend_store"]
+        },
+
+        {
+            "id": "kafka_trending",
+            "sequence": ["kafka", "trend", "trend_store"]
+        }
+    ],
+
+    "processors": [
+        {
+            "id": "trend",
+            "classname": "com.ripjar.spark.process.TrendingProcessor",
+            "jar": "/path/to/jar.jar",
+            "parameters": {
+                "input": "status",
+            }
+        },
+        {
+            "id": "trend_store",
+            "classname": "com.ripjar.spark.process.TrendingStorage"
+            "jar": "/path/to/jar.jar",
+            "parameters": {
+                "print" : "true"
+            }
+        }
+    ],
+
+    "instances": [
+        {
+            "id": "trend",
+            "processId": "trend",
+            "parameters": {
+                "duration": "3600",
+                "slide_duration" : "1"
+            }
+        },
+        {
+            "id": "trend_store",
+            "processId": "trend_store",
+            "parameters": {
+                "print" : "true",
+                "trend_file" : "trending"
+            }
+        }
+    ]
+}
