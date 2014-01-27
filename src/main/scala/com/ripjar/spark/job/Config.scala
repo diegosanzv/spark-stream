@@ -28,7 +28,7 @@ case class ProcessorCfg(val id: String,
   val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already
   val datasets: Array[String] = Array.empty, // Dataset is optional
   override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
-  override def toString() = "classname: %s, jars: %s, datasets: %s, parameters: %s".format(classname, jars.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
+  override def toString() = "classname: %s, jars: %s, datasets: %s, parameters: %s".format(classname, jars.mkString("[", ",", "]"), datasets.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
 
 }
 
@@ -46,11 +46,12 @@ case class Flow(val id: String,
   override def toString() = "sequence: %s".format(sequence.mkString("[", ",", "]"))
 }
 
-case class SourceCfg(val id: String,
+case class SourceCfg(
+  val id: String,
   val classname: String,
   val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already
   val datasets: Array[String] = Array.empty, // Dataset is optional
   override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
-  override def toString() = "classname: %s, jars: %s, datasets: %s, parameters: %s".format(classname, jars.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
+  override def toString() = "id: %s, classname: %s, jars: %s, datasets: %s, parameters: %s".format(id, classname, jars.mkString("[", ",", "]"), datasets.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
 
 }

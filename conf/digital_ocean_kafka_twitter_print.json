@@ -26,7 +26,7 @@
                 "group": "kafka_trending.1",
                 "zkQuorum": "192.81.209.163:2181",
                 "numThreads": "2",
-                "binary": false
+                "binary": "false"
             }
         },
         {
@@ -37,7 +37,7 @@
                 "group": "legacy.1",
                 "zkQuorum": "192.81.209.163:2181",
                 "numThreads": "2",
-                "binary": false
+                "binary": "false"
             }
         }
     ],

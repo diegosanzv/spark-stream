@@ -66,6 +66,7 @@ object App {
   def buildProcessing(config: StreamConfig, ssc: StreamingContext) {
     // read the processor configs
     val processors: Map[String, Any] = config.processors.map(proc => {
+      println("Processor: " + proc.toString)
       (proc, createClass[com.ripjar.spark.process.Processor](proc.classname))
 
     }).foldLeft(Map[String, Any]())((map: Map[String, Any], item: (ProcessorCfg, Any)) => {
@@ -94,6 +95,7 @@ object App {
 
     // Ends will all items (id -> Either Processor Source), adds those to the instances map.
     val stages: Map[String, Any] = config.sources.map(src => {
+      println("Source: " + src.toString)
       val srcClass: Class[Source] = createClass[Source](src.classname)
 
       val srcInstance = srcClass.getDeclaredConstructor(classOf[SourceCfg], classOf[StreamingContext]).newInstance(src, ssc)
@@ -107,9 +109,9 @@ object App {
     config.flows.foreach(flow => {
       val seq = flow.sequence.map(id => {
         stages.get(id) match {
-        case Some(xid) => xid
-        case _ => throw new SparkJobException("Cannot find a process with id %s, required for flow.".format(id), SparkJobErrorType.InvalidConfig)
-        }        
+          case Some(xid) => xid
+          case _ => throw new SparkJobException("Cannot find a process with id %s, required for flow.".format(id), SparkJobErrorType.InvalidConfig)
+        }
       }).toList
 
       val sourceStream = seq.head.asInstanceOf[Source].stream()
