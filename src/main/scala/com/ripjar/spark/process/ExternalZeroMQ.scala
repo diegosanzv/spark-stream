@@ -1,6 +1,5 @@
 package com.ripjar.spark.process
 
-import com.ripjar.spark.job.ProcessConfig
 import com.ripjar.spark.data._
 import com.ripjar.zmq.ZMQWorker
 import org.slf4j.Logger

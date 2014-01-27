@@ -15,23 +15,6 @@ case class IngestConfig(
   override val parameters: Map[String, String],
   val datasets: Array[String]) extends AbstractParameterizedConfig(parameters) {}
 
-case class ProcessConfig(val id: String,
-  val from: String,
-  val processType: String,
-  override val parameters: Map[String, String],
-  val datasets: Array[String]) extends AbstractParameterizedConfig(parameters) {}
-
-case class Config(val client: String,
-  val api: String,
-  val id: String,
-  val task_name: String,
-  val spark_master: String,
-  val spark_home: String,
-  val stream_duration: Int,
-  val jars: Array[String],
-  val from: IngestConfig,
-  val processes: Array[ProcessConfig]) {}
-
 case class StreamConfig(val client: String,
   val api: String,
   val id: String,

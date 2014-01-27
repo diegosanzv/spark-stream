@@ -1,6 +1,5 @@
 package com.ripjar.spark.process
 
-import com.ripjar.spark.job.ProcessConfig
 import com.ripjar.spark.data._
 import com.ripjar.spark.job.SparkJobException
 import com.ripjar.spark.job.SparkJobErrorType

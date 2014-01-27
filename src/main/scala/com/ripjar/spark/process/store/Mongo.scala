@@ -1,6 +1,5 @@
 package com.ripjar.spark.process
 
-import com.ripjar.spark.job.ProcessConfig
 import com.ripjar.spark.data._
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
