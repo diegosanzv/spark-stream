@@ -5,4 +5,4 @@ export CP=$CP:target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar
 export CP=$CP:.
 
 
-java -cp "$CP" com.ripjar.spark.job.App -c conf/digital_ocean_kafka_twitter_print.json --start
+java -Dakka.version=3 -cp "$CP" com.ripjar.spark.job.App -c conf/digital_ocean_kafka_twitter_print.json --start
