@@ -1,4 +1,4 @@
-package com.ripjar.spark.process
+package com.ripjar.spark.process.store
 
 import org.elasticsearch.node.NodeBuilder.nodeBuilder
 import org.elasticsearch.action.index.IndexResponse
@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import com.ripjar.spark.job.Instance
 import org.apache.spark.streaming.dstream.DStream
 import com.ripjar.spark.data._
+import com.ripjar.spark.process.Processor
 
 
 /*
@@ -23,8 +24,8 @@ import com.ripjar.spark.data._
  *
  */
 // TODO: Handle timeouts / failures
-object ElasticsearchStoreage {
-  val logger = LoggerFactory.getLogger(classOf[ElasticsearchStoreage])
+object Elasticsearch {
+  val logger = LoggerFactory.getLogger(classOf[Elasticsearch])
 
   var client: Client = null
 
@@ -42,7 +43,7 @@ object ElasticsearchStoreage {
   }
 }
 
-class ElasticsearchStoreage(config: Instance) extends Processor with Serializable {
+class Elasticsearch(config: Instance) extends Processor with Serializable {
 
   val cluster: String = config.getMandatoryParameter("cluster")
 
@@ -52,7 +53,7 @@ class ElasticsearchStoreage(config: Instance) extends Processor with Serializabl
 
   def store(input: DataItem): DataItem = {
     val json: String = input.toString
-//TODO - Complete    ElasticsearchStoreage.getClient(cluster).update(request)
+//TODO - Complete    Elasticsearch.getClient(cluster).update(request)
 
 
     input
