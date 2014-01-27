@@ -1,6 +1,6 @@
 package com.ripjar.spark.job
 
-abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) {
+abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) { //Parameters is optional
   def getMandatoryParameter(key: String): String = {
     parameters.get(key) match {
       case Some(x) => x
@@ -25,20 +25,32 @@ case class StreamConfig(
 
 case class ProcessorCfg(val id: String,
   val classname: String,
-  val jar: String,
-  val datasets: Array[String],
-  override val parameters: Map[String, String]) extends AbstractParameterizedConfig(parameters) {}
+  val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already
+  val datasets: Array[String] = Array.empty, // Dataset is optional
+  override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
+  override def toString() = "classname: %s, jars: %s, datasets: %s, parameters: %s".format(classname, jars.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
+
+}
 
 //An instance of a processor
-case class Instance(val id: String,
+case class Instance(
+  val id: String,
   val processId: String,
-  override val parameters: Map[String, String]) extends AbstractParameterizedConfig(parameters) {}
+  override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
+  override def toString() = "id: %s, processId: %s, parameters: %s".format(id, processId, parameters.mkString("[", ",", "]"))
+}
 
 //TODO: How would we specify a tee
 case class Flow(val id: String,
-  val sequence: Array[String]) {}
+  val sequence: Array[String]) {
+  override def toString() = "sequence: %s".format(sequence.mkString("[", ",", "]"))
+}
 
 case class SourceCfg(val id: String,
   val classname: String,
-  override val parameters: Map[String, String],
-  val datasets: Array[String]) extends AbstractParameterizedConfig(parameters) {}
+  val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already
+  val datasets: Array[String] = Array.empty, // Dataset is optional
+  override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
+  override def toString() = "classname: %s, jars: %s, datasets: %s, parameters: %s".format(classname, jars.mkString("[", ",", "]"), parameters.mkString("[", ",", "]"))
+
+}
