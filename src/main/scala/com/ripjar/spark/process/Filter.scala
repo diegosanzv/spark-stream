@@ -75,6 +75,8 @@ class Filter(config: Instance) extends Processor with Serializable {
               item
             })
           }
+
+          case _ => stream
         }
     })
   }
