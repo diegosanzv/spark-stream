@@ -54,6 +54,7 @@ class Trending(config: Instance) extends Processor with Serializable {
     }).flatMap(status => {
       // Generate words
 
+      // TODO: this should actually be a regex
       status.split(" ")
     }).filter(word => {
       // get those words starting with #
