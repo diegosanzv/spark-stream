@@ -10,8 +10,7 @@ import com.typesafe.config.ConfigFactory
 
 /*
 
-   For this to work correctly, there need to be an application.conf in the resources
-   it should look like this:
+  configuration is required for the following keys
 
    consumer_key = "string"
    consumer_secret = "string"
@@ -23,12 +22,11 @@ import com.typesafe.config.ConfigFactory
 class Twitter(val config: SourceCfg, val ssc: StreamingContext) extends Source {
 
   val logger = LoggerFactory.getLogger("TwitterSource")
-  val conf = ConfigFactory.load()
 
-  System.setProperty("twitter4j.oauth.consumerKey", conf.getString("consumer_key"))
-  System.setProperty("twitter4j.oauth.consumerSecret", conf.getString("consumer_secret"))
-  System.setProperty("twitter4j.oauth.accessToken", conf.getString("access_token"))
-  System.setProperty("twitter4j.oauth.accessTokenSecret", conf.getString("access_token_secret"))
+  System.setProperty("twitter4j.oauth.consumerKey", config.getMandatoryParameter("consumer_key"))
+  System.setProperty("twitter4j.oauth.consumerSecret", config.getMandatoryParameter("consumer_secret"))
+  System.setProperty("twitter4j.oauth.accessToken", config.getMandatoryParameter("access_token"))
+  System.setProperty("twitter4j.oauth.accessTokenSecret", config.getMandatoryParameter("access_token_secret"))
 
   def stream(): DStream[DataItem] = {
     println("Twitter stream requested")
