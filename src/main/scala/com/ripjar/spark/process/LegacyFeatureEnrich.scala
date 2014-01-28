@@ -30,17 +30,17 @@ import java.lang.{ Object => JObject }
  * 
  * The tasks route overloads the default route
  */
-//TODO: Test
 //TODO: Set resources
 object LegacyFeatureEnrich {
   val logger = LoggerFactory.getLogger(classOf[LegacyFeatureEnrich])
 
   var featureProcessor: FeatureProcessor = null
 
-  def getFeatureProcessor(): FeatureProcessor = {
+  def getFeatureProcessor(resources: String): FeatureProcessor = {
     if (featureProcessor == null) {
       featureProcessor.synchronized {
         if (featureProcessor == null) {
+          System.setProperty("resources", resources)
           featureProcessor = new FeatureProcessor
         }
       }
@@ -53,6 +53,7 @@ object LegacyFeatureEnrich {
 // Performs enrichment using methods form MM phase 1
 class LegacyFeatureEnrich(config: Instance) extends Processor with Serializable {
 
+  val resources = config.getMandatoryParameter("resources")
   val defaultTextPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
   val taskTextPath = DataItem.toPathElements("task.enrich.field")
 
@@ -72,7 +73,7 @@ class LegacyFeatureEnrich(config: Instance) extends Processor with Serializable 
       case Some(value: String) => {
         val lm: JMap[JString, JObject] = new JHashMap[JString, JObject]()
         lm.put("message", value)
-        LegacyFeatureEnrich.getFeatureProcessor.process(lm)
+        LegacyFeatureEnrich.getFeatureProcessor(resources).process(lm)
         lm.remove("message")
         item.merge(lm)
       }
