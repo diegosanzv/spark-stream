@@ -93,7 +93,7 @@ object App {
       map ++ Map(item._1 -> item._2)
     })
 
-    // Ends will all items (id -> Either Processor Source), adds those to the instances map.
+    // Ends with all items (id -> Either Processor Source), adds those to the instances map.
     val stages: Map[String, Any] = config.sources.map(src => {
       println("Source: " + src.toString)
       val srcClass: Class[Source] = createClass[Source](src.classname)
