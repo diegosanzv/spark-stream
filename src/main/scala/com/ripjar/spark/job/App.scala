@@ -33,7 +33,6 @@ object App {
     } text ("route name")
   }
 
-  //TODO: Start / Stop param needed
   def main(args: Array[String]) {
     println(">>>>>>>>>>>>>>>>>>" + args.mkString(","))
     parser.parse(args, AppConfig()) map { appconfig =>
@@ -52,7 +51,7 @@ object App {
 
         ssc.start()
       } else if (appconfig.stop) {
-        //TODO: STOP
+        System.err.println("Not implemented stop yet .. just kill the process.")
       } else {
         System.err.println("Need to run with either --start or --stop.")
         parser.showUsage
