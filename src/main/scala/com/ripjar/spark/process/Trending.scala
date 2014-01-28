@@ -28,38 +28,35 @@ import org.apache.spark.streaming.dstream.DStream
  *      	}, ...]	 	
  *
  */
-//TODO - Parameterize based on a per item task configuration
-//TODO - Parameterize the match and filter 
+
+//TODO: technically we are doing 2 functions here. Split and Trend. Do we want to
+//      split that up into 2 processors for more generalization?
 class Trending(config: Instance) extends Processor with Serializable {
 
   val inputPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
   val duration = config.getMandatoryParameter("duration").toInt
   val slide_duration = config.getMandatoryParameter("slide_duration").toInt
-  val splitOn = DataItem.toPathElements(config.getMandatoryParameter("split_on"))
-  val matchOn = DataItem.toPathElements(config.getMandatoryParameter("match_on"))
 
-
-  //Todo .. convert to a functor .. something like
-  //val getInput: (DataSet => String) = DataSet.compile(config.getMandatoryParameter("input"))
-  //called in process like ...  val value = getInput(input)
+  // defaulting on twitter.
+  val splitOn = config.getParameter("split_on", " ")
+  val matchOn = config.getParameter("match_on", "^#.*")
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(input => {
       // make sure the Strings are not empty
 
-      input.getMandatoryTyped[String](inputPath) match {
-        case null => ""
+      input.getTyped[String](inputPath) match {
+        case None => ""
         case n => n.toString
       }
     }).flatMap(status => {
       // Generate words
 
-      // TODO: this should actually be a regex
-      status.split(" ")
+      status.split(splitOn)
     }).filter(word => {
       // get those words starting with #
 
-      word.startsWith("#")
+      word.matches(matchOn)
     }).map(tag => {
       // Convert words into tuples
       (tag, 1)
