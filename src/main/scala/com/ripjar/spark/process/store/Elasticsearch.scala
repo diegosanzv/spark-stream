@@ -28,7 +28,6 @@ import org.elasticsearch.action.index.IndexRequestBuilder
  *      }	 	
  *
  */
-// TODO: Test
 object Elasticsearch {
   val logger = LoggerFactory.getLogger(classOf[Elasticsearch])
 

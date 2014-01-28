@@ -110,7 +110,6 @@ object TextExtract {
  * Task parameters:
  *
  */
-// TODO: Test
 class TextExtract(config: Instance) extends Processor with Serializable {
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {

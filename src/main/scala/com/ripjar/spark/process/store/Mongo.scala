@@ -25,7 +25,6 @@ import com.mongodb.util.JSON
  * 
  * The tasks route overloads the default route
  */
-//TODO: Test
 object Mongo {
   val logger = LoggerFactory.getLogger(classOf[Mongo])
 

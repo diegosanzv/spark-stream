@@ -21,7 +21,6 @@ import com.ripjar.spark.process.Processor
  * 
  * The tasks route overloads the default route
  */
-//TODO: Test
 object Kafka {
   val logger = LoggerFactory.getLogger(classOf[Kafka])
 

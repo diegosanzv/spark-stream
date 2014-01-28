@@ -10,7 +10,6 @@ import com.ripjar.spark.job.Instance
 /*
  * Logs the stream
  */
-//TODO: Test
 object Log {
   val logger = LoggerFactory.getLogger(classOf[Log])
 }
