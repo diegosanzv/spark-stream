@@ -128,6 +128,74 @@ object App {
         ret
       })
     })
+
+
+    /* work  in progress, don't delete
+    // produce disjoint flow map (branches are separate strands)
+    val mapFlows = config.flows.map(flow => {
+      // produce a list of sources
+      val entries: Array[FlowEnt] = flow.sequence.map(id => {
+        new FlowEnt(id)
+      })
+
+      // link up the entries
+      entries.foldRight[FlowEnt](null)( (current, next) => {
+        if(next != null) {
+          current.next = List(next)
+        }
+
+        current
+      })
+
+      entries.foldLeft[FlowEnt](null)( (prev, current) => {
+        if(prev != null) {
+          current.prev = List(prev)
+        }
+
+        current
+      })
+
+      println(entries)
+
+      entries
+    }).foldLeft(Map[String, List[FlowEnt]]())( (map, entArr : Array[FlowEnt]) => {
+      // add to map. To map where already in list.
+      entArr.foldLeft[Map[String, List[FlowEnt]]](map)( (map : Map[String, List[FlowEnt]], ent) => {
+        map.get(ent.name) match {
+          case Some(lst) => map ++ Map[String, List[FlowEnt]](ent.name -> ( ent :: lst ))
+          case _ => map ++ Map[String, List[FlowEnt]](ent.name -> List[FlowEnt](ent))
+        }
+      })
+    })
+
+    // the flows are not merged into a graph.
+    val merged = mapFlows.mapValues(_.distinct).map( pair => {
+      val name = pair._1
+      val lst = pair._2
+      val first = lst.head
+
+      if(lst.length > 1) {
+        val allPrev : List[String] = lst.flatMap(_.prev.map(_.name)).distinct
+        val allNext : List[String] = lst.flatMap(_.next.map(_.name)).distinct
+
+        first.next = allNext.map(name => {
+          mapFlows.get(name) match {
+            // because we know the first will be extracted/reused - see 'first' value.
+            case Some(flow) => flow.head
+          }
+        })
+
+        first.prev = allPrev.map(name => {
+          mapFlows.get(name) match {
+            case Some(flow) => flow.head
+          }
+        })
+      }
+
+      (name, first)
+    })
+
+    println(merged)*/
   }
 
   def createClass[T](classname: String): Class[T] = {
@@ -154,4 +222,27 @@ object App {
     }
   }
 
+}
+
+class FlowEnt(val name:String) {
+  var next : List[FlowEnt] = List()
+  var prev : List[FlowEnt] = List()
+  var procEntity : Any = null
+
+  override def toString():String = {
+    "(" +
+      prev.map(_.name) +
+      " > " + name + " > " +
+      next.map(_.name) + ")"
+  }
+
+  override def equals(othr: Any) : Boolean = {
+    val other = othr.asInstanceOf[FlowEnt]
+
+    next.map(_.name) == other.next.map(_.name) && name.equals(other.name) && prev.map(_.name) == other.prev.map(_.name)
+  }
+
+  override def hashCode() : Int = {
+    next.map(_.name).hashCode() + name.hashCode() + prev.map(_.name).hashCode()
+  }
 }
