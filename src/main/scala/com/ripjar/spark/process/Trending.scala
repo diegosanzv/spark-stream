@@ -28,9 +28,6 @@ import org.apache.spark.streaming.dstream.DStream
  *      	}, ...]	 	
  *
  */
-
-//TODO: technically we are doing 2 functions here. Split and Trend. Do we want to
-//      split that up into 2 processors for more generalization?
 class Trending(config: Instance) extends Processor with Serializable {
 
   val inputPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
