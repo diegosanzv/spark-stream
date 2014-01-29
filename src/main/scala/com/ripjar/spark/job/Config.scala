@@ -7,6 +7,13 @@ abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) 
       case None => throw new SparkJobException("Missing: '%s', found: %s".format(key, parameters.mkString("[", ",", "]")), SparkJobErrorType.MandatoryParameterNotPresent)
     }
   }
+
+  def getParameter(key: String, default: String) : String = {
+    parameters.get(key) match {
+      case Some(x) => x
+      case None => default
+    }
+  }
 }
 
 case class StreamConfig(
@@ -40,7 +47,7 @@ case class Instance(
   override def toString() = "id: %s, processId: %s, parameters: %s".format(id, processId, parameters.mkString("[", ",", "]"))
 }
 
-//TODO: How would we specify a tee
+//TODO: How would we specify a tee. Where name in sequence matches, there the split happens.
 case class Flow(val id: String,
   val sequence: Array[String]) {
   override def toString() = "sequence: %s".format(sequence.mkString("[", ",", "]"))

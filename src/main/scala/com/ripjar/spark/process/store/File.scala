@@ -25,9 +25,15 @@ import com.ripjar.spark.process.Processor
 // Possibly having a filter matching the tasks
 class File(config: Instance) extends Processor {
   val file = config.getMandatoryParameter("file")
+  val asObject = config.getParameter("asObject", "false").toBoolean
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
-    stream.saveAsTextFiles(file)
+    if(asObject) {
+      stream.saveAsObjectFiles(file)
+    } else {
+      stream.saveAsTextFiles(file)
+    }
+
     stream
   }
 }

@@ -45,16 +45,40 @@ class Filter(config: Instance) extends Processor with Serializable {
     }
   }
 
-  val defaultFlilterConfig: FilterConfig = config.parameters.get("filter") match {
+  val filters: FilterConfig = config.parameters.get("filter") match {
     case Some(json) => parseJson(json)
     case _ => new FilterConfig(List[FilterConfigItem]())
   }
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
-    stream.filter(filter(_))
+    filters.items.foldLeft(stream)((stream: DStream[DataItem], filtr) => {
+      filtr.method match {
+
+          // regexes filter based on a match
+          case "regex" => {
+            stream.filter(item => {
+              item.getTyped[String](filtr.field) match {
+                case Some(x) => !x.matches(filtr.condition)
+                case _ => true
+              }
+            })
+          }
+
+          // outs remove the fields from a data item. It's really a mapping
+          case "out" => {
+            stream.map(item => {
+              item.remove(filtr.field)
+
+              item
+            })
+          }
+
+          case _ => stream
+        }
+    })
   }
 
-  def filter(item: DataItem): Boolean = {
+ /* def filter(item: DataItem): Boolean = {
     def test(fci: FilterConfigItem): Boolean = {
       //TODO: Complete
       true
@@ -68,8 +92,8 @@ class Filter(config: Instance) extends Processor with Serializable {
         val filters: List[FilterConfigItem] = defaultFlilterConfig.items ++ additionalFilters
         new FilterConfig(filters)
       }
-      case _ => defaultFlilterConfig
+      case _ => filters
     }
     fliterConfig.items.forall(fci => { test(fci) })
-  }
+  }*/
 }
