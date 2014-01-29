@@ -1,0 +1,72 @@
+{
+    "client": "client_key",
+    "api": "api_key",
+    "id": "test-routes",
+    "task_name": "tweet-enrich-elastic",
+    "spark_master": "local",
+    "spark_home": "../../incubator-spark/",
+    "stream_duration": 1,
+    "jars": [
+        "./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
+    ],
+    "sources": [
+        {
+            "id": "kafka-tweet",
+            "classname": "com.ripjar.spark.source.Kafka",
+            "parameters": {
+                "topics": "route.node_test.1",
+                "group": "legacy.1",
+                "zkQuorum": "192.81.209.163:2181",
+                "numThreads": "2",
+                "binary": "false"
+            }
+        }
+    ],
+    "processors": [
+        {
+            "id": "enrich",
+            "classname": "com.ripjar.spark.process.LegacyFeatureEnrich"
+        },
+        {
+            "id": "log",
+            "classname": "com.ripjar.spark.process.Log"
+        },
+        {
+            "id": "elastic",
+            "classname": "com.ripjar.spark.process.store.Elasticsearch"
+        }
+    ],
+    "instances": [
+        {
+            "id": "enrich",
+            "processId": "enrich",
+            "parameters": {
+                "input": "tweet.text"
+            }
+        },
+        {
+            "id": "log",
+            "processId": "log"
+        },
+        {
+            "id": "elastic",
+            "processId": "elastic",
+            "parameters": {
+                "cluster": "localhost",
+                "index": "twitter",
+                "doctype": "tweet"
+            }
+        }
+    ],
+    "flows": [
+        {
+            "id": "legacy",
+            "sequence": [
+                "kafka-tweet",
+                "enrich",
+                "summarize",
+                "elastic"
+            ]
+        }
+    ]
+}

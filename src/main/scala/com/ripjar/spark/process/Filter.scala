@@ -22,9 +22,6 @@ import com.ripjar.spark.job.SparkJobErrorType
  *      	]	 	
  *
  */
-//TODO: Complete
-// Performs simple filters in the map based upon task parameters
-
 case class FilterConfig(val items: List[FilterConfigItem])
 case class FilterConfigItem(val field: String, val method: String, val condition: String = "")
 
@@ -59,7 +56,7 @@ class Filter(config: Instance) extends Processor with Serializable {
 
   def filter(item: DataItem): Boolean = {
     def test(fci: FilterConfigItem): Boolean = {
-      //TODO
+      //TODO: Complete
       true
     }
 
