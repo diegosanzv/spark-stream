@@ -6,7 +6,7 @@ import org.json4s.native.JsonMethods._
 import org.apache.spark.streaming.{ Seconds, StreamingContext }
 import org.apache.spark.streaming.dstream.DStream
 import com.ripjar.spark.data.DataItem
-import com.ripjar.spark.process.Processor
+import com.ripjar.spark.process.{MultiProcessor, Processor}
 import com.ripjar.spark.source.Source
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -84,7 +84,11 @@ object App {
       (inst.id, inst.copy(parameters = procConfig.parameters ++ inst.parameters), klass)
 
     }).map(tuple => {
-      val proc = tuple._3.getDeclaredConstructor(classOf[Instance]).newInstance(tuple._2)
+      val klass = tuple._3
+
+      println("Instantiating: " + klass)
+
+      val proc = klass.getDeclaredConstructor(classOf[Instance]).newInstance(tuple._2)
 
       (tuple._1, proc)
 
@@ -105,7 +109,7 @@ object App {
     })
 
     // connect all the flows together
-    config.flows.foreach(flow => {
+    /*config.flows.foreach(flow => {
       val seq = flow.sequence.map(id => {
         stages.get(id) match {
           case Some(xid) => xid
@@ -127,10 +131,10 @@ object App {
 
         ret
       })
-    })
+    })*/
 
 
-    /* work  in progress, don't delete
+    // work  in progress, don't delete
     // produce disjoint flow map (branches are separate strands)
     val mapFlows = config.flows.map(flow => {
       // produce a list of sources
@@ -169,7 +173,7 @@ object App {
     })
 
     // the flows are not merged into a graph.
-    val merged = mapFlows.mapValues(_.distinct).map( pair => {
+    val flowEnds = mapFlows.mapValues(_.distinct).map( pair => {
       val name = pair._1
       val lst = pair._2
       val first = lst.head
@@ -193,9 +197,13 @@ object App {
       }
 
       (name, first)
+    }).filter(pair => {
+      pair._2.next.length == 0
+    }).mapValues(flowEnt => {
+      flowEnt.getStream(stages)
     })
 
-    println(merged)*/
+    println(flowEnds)
   }
 
   def createClass[T](classname: String): Class[T] = {
@@ -227,7 +235,7 @@ object App {
 class FlowEnt(val name:String) {
   var next : List[FlowEnt] = List()
   var prev : List[FlowEnt] = List()
-  var procEntity : Any = null
+  var res_stream : DStream[DataItem] = null
 
   override def toString():String = {
     "(" +
@@ -244,5 +252,29 @@ class FlowEnt(val name:String) {
 
   override def hashCode() : Int = {
     next.map(_.name).hashCode() + name.hashCode() + prev.map(_.name).hashCode()
+  }
+
+  def getStream(instMap : Map[String, Any]) : DStream[DataItem] = {
+    if(res_stream != null) {
+      return res_stream
+    }
+
+    val proc = instMap.get(name) match {
+      case Some(p) => p
+      case _       => throw new SparkJobException("Flow " + name + " has not instance associated", SparkJobErrorType.InvalidConfig)
+    }
+
+    // build previous streams
+    val prevStreams = prev.map(p => {
+      p.getStream(instMap)
+    })
+
+    res_stream = prevStreams.length match {
+      case 0 => proc.asInstanceOf[Source].stream()
+      case 1 => proc.asInstanceOf[Processor].process(prevStreams.head)
+      case _ => proc.asInstanceOf[MultiProcessor].process(prevStreams.toArray)
+    }
+
+    res_stream
   }
 }
