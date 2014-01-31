@@ -1,5 +1,54 @@
 package com.ripjar.spark.job
 
+import org.json4s._
+import com.ripjar.spark.job.SourceCfg
+import com.ripjar.spark.job.ProcessorCfg
+import com.ripjar.spark.job.StreamConfig
+import com.ripjar.spark.job.AppConfig
+import com.ripjar.spark.job.Flow
+import com.ripjar.spark.job.Instance
+import scala.Some
+import com.ripjar.spark.job.SparkJobException
+import org.json4s.native.JsonMethods._
+import com.ripjar.spark.job.SourceCfg
+import com.ripjar.spark.job.ProcessorCfg
+import com.ripjar.spark.job.StreamConfig
+import com.ripjar.spark.job.AppConfig
+import com.ripjar.spark.job.Flow
+import com.ripjar.spark.job.Instance
+import scala.Some
+import com.ripjar.spark.job.SparkJobException
+import com.ripjar.spark.job.SourceCfg
+import com.ripjar.spark.job.ProcessorCfg
+import com.ripjar.spark.job.StreamConfig
+import com.ripjar.spark.job.AppConfig
+import com.ripjar.spark.job.Flow
+import com.ripjar.spark.job.Instance
+import scala.Some
+import com.ripjar.spark.job.SparkJobException
+
+object Config {
+  def parseJsonFile(jsonFile: String): StreamConfig = {
+    val json = try {
+      scala.io.Source.fromFile(jsonFile).mkString
+    } catch {
+      case e: Exception => throw new SparkJobException("Cannot read JSON config file: %s".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
+    }
+    val jvRoot: JValue = parse(json)
+
+    jvRoot match {
+      case joRoot: JObject => {
+        implicit val formats = DefaultFormats
+        joRoot.extract[StreamConfig]
+      }
+      case _ => {
+        throw new SparkJobException("Cannot parse the JSON config file: ".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
+
+      }
+    }
+  }
+}
+
 abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) { //Parameters is optional
   def getMandatoryParameter(key: String): String = {
     parameters.get(key) match {
@@ -47,7 +96,6 @@ case class Instance(
   override def toString() = "id: %s, processId: %s, parameters: %s".format(id, processId, parameters.mkString("[", ",", "]"))
 }
 
-//TODO: How would we specify a tee. Where name in sequence matches, there the split happens.
 case class Flow(val id: String,
   val sequence: Array[String]) {
   override def toString() = "sequence: %s".format(sequence.mkString("[", ",", "]"))

@@ -37,7 +37,7 @@ object App {
     println(">>>>>>>>>>>>>>>>>>" + args.mkString(","))
     parser.parse(args, AppConfig()) map { appconfig =>
       if (appconfig.start) {
-        val config = parseJsonFile(appconfig)
+        val config = Config.parseJsonFile(config.configFile)
 
         System.getProperties.setProperty("spark.cleaner.ttl", "7200")
 
@@ -209,27 +209,6 @@ object App {
   def createClass[T](classname: String): Class[T] = {
     Class.forName(classname).asInstanceOf[Class[T]]
   }
-
-  def parseJsonFile(config: AppConfig): StreamConfig = {
-    val json = try {
-      scala.io.Source.fromFile(config.configFile).mkString
-    } catch {
-      case e: Exception => throw new SparkJobException("Cannot read JSON config file: %s".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
-    }
-    val jvRoot: JValue = parse(json)
-
-    jvRoot match {
-      case joRoot: JObject => {
-        implicit val formats = DefaultFormats
-        joRoot.extract[StreamConfig]
-      }
-      case _ => {
-        throw new SparkJobException("Cannot parse the JSON config file: ".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
-
-      }
-    }
-  }
-
 }
 
 class FlowEnt(val name:String) {
