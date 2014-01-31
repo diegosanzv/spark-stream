@@ -21,20 +21,22 @@ class BasicJoiner extends MultiProcessor {
     }
   }
 
+  def pairedMap(item: DataItem) : (Int, DataItem) = {
+    (item.hashCode, item)
+  }
+
   def process(streams: Array[DStream[DataItem]]) : DStream[DataItem] = {
     if(streams.length <= 1) {
       return streams.head
     }
 
-    val paired = streams.map(stream => {
-      stream.map(item => {
-        (item.hashCode, item)
-      })
-    }).toList
+    val lst = streams.toList
 
     // join them all up.
-    paired.tail.foldLeft[DStream[(Int, DataItem)]](paired.head)( (joinStream, otherStream) => {
-      joinStream.leftOuterJoin(otherStream).flatMap(flattenJoined)
-    }).flatMap(flattenJoined)
+    lst.tail.foldLeft[DStream[DataItem]](lst.head)( (joinStream, otherStream) => {
+      val otherMapped = otherStream.map(pairedMap)
+
+      joinStream.map(pairedMap).leftOuterJoin(otherMapped).flatMap(flattenJoined)
+    })
   }
 }
