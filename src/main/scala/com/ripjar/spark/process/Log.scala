@@ -4,7 +4,7 @@ import com.ripjar.spark.data._
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.apache.spark.streaming.dstream.DStream
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 
 
 /*
@@ -14,7 +14,7 @@ object Log {
   val logger = LoggerFactory.getLogger(classOf[Log])
 }
 
-class Log(config: Instance) extends Processor with Serializable {
+class Log(config: InstanceConfig) extends Processor with Serializable {
 
   override def process(input: DStream[DataItem]): DStream[DataItem] = {
     input.map(print(_))

@@ -2,7 +2,7 @@ package com.ripjar.spark.process
 
 import com.ripjar.spark.data._
 import org.apache.spark.streaming.dstream.DStream
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 
 /*
  * Performs simple movements and merges in the map based upon task parameters
@@ -20,7 +20,7 @@ import com.ripjar.spark.job.Instance
  *
  */
 //TODO: Complete
-class Transform(config: Instance) extends Processor with Serializable {
+class Transform(config: InstanceConfig) extends Processor with Serializable {
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(transform(_))

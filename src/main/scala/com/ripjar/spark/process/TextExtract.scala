@@ -10,7 +10,7 @@ import org.apache.spark.streaming.dstream.DStream
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 import org.apache.tika.metadata.Metadata
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 
 object TextExtract {
   val logger = LoggerFactory.getLogger(classOf[TextExtract])
@@ -110,7 +110,7 @@ object TextExtract {
  * Task parameters:
  *
  */
-class TextExtract(config: Instance) extends Processor with Serializable {
+class TextExtract(config: InstanceConfig) extends Processor with Serializable {
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(extract(_))

@@ -1,14 +1,17 @@
 {
-    "client": "client_key",
-    "api": "api_key",
-    "id": "test-routes",
-    "task_name": "tweet-print",
-    "spark_master": "local",
-    "spark_home": "../../incubator-spark/",
-    "stream_duration": 1,
-    "jars": [
-        "./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
-    ],
+    "system": {
+    	"client": "client_key",
+    	"api": "api_key",
+    	"id": "test-routes",
+    	"task_name": "tweet-print",
+    	"spark_master": "local",
+    	"spark_home": "../../incubator-spark/",
+    	"stream_duration": 1,
+    	"jars": [
+        	"./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
+    	]
+    },
+
     "sources": [
         {
             "id": "twitter",

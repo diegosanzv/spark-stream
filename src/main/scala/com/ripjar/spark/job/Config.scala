@@ -1,32 +1,10 @@
 package com.ripjar.spark.job
 
 import org.json4s._
-import com.ripjar.spark.job.SourceCfg
-import com.ripjar.spark.job.ProcessorCfg
-import com.ripjar.spark.job.StreamConfig
-import com.ripjar.spark.job.AppConfig
-import com.ripjar.spark.job.Flow
-import com.ripjar.spark.job.Instance
-import scala.Some
-import com.ripjar.spark.job.SparkJobException
 import org.json4s.native.JsonMethods._
-import com.ripjar.spark.job.SourceCfg
-import com.ripjar.spark.job.ProcessorCfg
-import com.ripjar.spark.job.StreamConfig
-import com.ripjar.spark.job.AppConfig
-import com.ripjar.spark.job.Flow
-import com.ripjar.spark.job.Instance
-import scala.Some
-import com.ripjar.spark.job.SparkJobException
-import com.ripjar.spark.job.SourceCfg
-import com.ripjar.spark.job.ProcessorCfg
-import com.ripjar.spark.job.StreamConfig
-import com.ripjar.spark.job.AppConfig
-import com.ripjar.spark.job.Flow
-import com.ripjar.spark.job.Instance
 import scala.Some
 import java.io.File
-import com.ripjar.spark.job.SparkJobException
+import scala.reflect.ClassTag
 
 object Config {
   def parseJsonFile(jsonFile: File): StreamConfig = {
@@ -39,8 +17,7 @@ object Config {
 
     jvRoot match {
       case joRoot: JObject => {
-        implicit val formats = DefaultFormats
-        joRoot.extract[StreamConfig]
+        extractObject(joRoot)
       }
       case _ => {
         throw new SparkJobException("Cannot parse the JSON config file: ".format(jsonFile.getName), SparkJobErrorType.InvalidConfig)
@@ -48,9 +25,51 @@ object Config {
       }
     }
   }
+
+  def extractObject(joRoot: JObject) : StreamConfig = {
+    implicit val formats = DefaultFormats
+
+    val sysConfig = (joRoot \ "system").extract[SystemConfig]
+    val procs     = extractParam[ProcessorConfig]( (joRoot \ "processors") )
+    val insts     = extractParam[InstanceConfig]( (joRoot \ "instances") )
+    val flows     = extractParam[FlowConfig]( (joRoot \ "flows") )
+    val srcs      = extractParam[SourceConfig]( (joRoot \ "sources") )
+
+    new StreamConfig(sysConfig, procs, insts, flows, srcs)
+  }
+
+  def extractParam[T:Manifest](root: JValue): Array[T] = {
+    implicit val formats = DefaultFormats
+
+    var lst = List[T]()
+
+    root match {
+      case arr: JArray => {
+        for(item <- arr.children) {
+          val config = item.extract[T]
+
+          if(config.isInstanceOf[AbstractParameterizedConfig]) {
+            val need_data = config.asInstanceOf[AbstractParameterizedConfig]
+            val data = item \ "data"
+
+            need_data.data = data
+          }
+
+          lst = config :: lst
+        }
+      }
+
+      case _ =>
+        throw new SparkJobException("Cannot parse the JSON config, Array expected (" + root + ")", SparkJobErrorType.InvalidConfig)
+    }
+
+    lst.reverse.toArray[T]
+  }
 }
 
 abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) { //Parameters is optional
+  var data: JValue = null
+
   def getMandatoryParameter(key: String): String = {
     parameters.get(key) match {
       case Some(x) => x
@@ -67,20 +86,22 @@ abstract class AbstractParameterizedConfig(val parameters: Map[String, String]) 
 }
 
 case class StreamConfig(
-  val client: String,
-  val api: String,
-  val id: String,
-  val task_name: String,
-  val spark_master: String,
-  val spark_home: String,
-  val stream_duration: Int,
-  val jars: Array[String],
-  val processors: Array[ProcessorCfg],
-  val instances: Array[Instance],
-  val flows: Array[Flow],
-  val sources: Array[SourceCfg]) {}
+  val system: SystemConfig,
+  val processors: Array[ProcessorConfig],
+  val instances: Array[InstanceConfig],
+  val flows: Array[FlowConfig],
+  val sources: Array[SourceConfig]) {}
 
-case class ProcessorCfg(val id: String,
+case class SystemConfig(val client: String,
+                        val api: String,
+                        val id: String,
+                        val task_name: String,
+                        val spark_master: String,
+                        val spark_home: String,
+                        val stream_duration: Int,
+                        val jars: Array[String]) {}
+
+case class ProcessorConfig(val id: String,
   val classname: String,
   val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already
   val datasets: Array[String] = Array.empty, // Dataset is optional
@@ -90,19 +111,19 @@ case class ProcessorCfg(val id: String,
 }
 
 //An instance of a processor
-case class Instance(
+case class InstanceConfig(
   val id: String,
   val processId: String,
   override val parameters: Map[String, String] = Map.empty) extends AbstractParameterizedConfig(parameters) {
   override def toString() = "id: %s, processId: %s, parameters: %s".format(id, processId, parameters.mkString("[", ",", "]"))
 }
 
-case class Flow(val id: String,
+case class FlowConfig(val id: String,
   val sequence: Array[String]) {
   override def toString() = "sequence: %s".format(sequence.mkString("[", ",", "]"))
 }
 
-case class SourceCfg(
+case class SourceConfig(
   val id: String,
   val classname: String,
   val jars: Array[String] = Array.empty, //No need to pass jars that will be in the classpath already

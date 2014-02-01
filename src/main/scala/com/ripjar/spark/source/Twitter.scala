@@ -1,6 +1,6 @@
 package com.ripjar.spark.source
 
-import com.ripjar.spark.job.SourceCfg
+import com.ripjar.spark.job.SourceConfig
 import com.ripjar.spark.data._
 import org.slf4j.LoggerFactory
 import org.apache.spark.streaming.dstream.DStream
@@ -19,7 +19,7 @@ import com.typesafe.config.ConfigFactory
 
  */
 
-class Twitter(val config: SourceCfg, val ssc: StreamingContext) extends Source {
+class Twitter(val config: SourceConfig, val ssc: StreamingContext) extends Source {
 
   val logger = LoggerFactory.getLogger("TwitterSource")
 

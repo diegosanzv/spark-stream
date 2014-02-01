@@ -28,7 +28,7 @@ import org.apache.spark.streaming.dstream.DStream
  *      	}, ...]	 	
  *
  */
-class Trending(config: Instance) extends Processor with Serializable {
+class Trending(config: InstanceConfig) extends Processor with Serializable {
 
   val inputPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
   val duration = config.getMandatoryParameter("duration").toInt

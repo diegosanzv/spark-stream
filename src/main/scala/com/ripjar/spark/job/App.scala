@@ -41,9 +41,10 @@ object App {
 
         System.getProperties.setProperty("spark.cleaner.ttl", "7200")
 
-        println("config.spark_master: " + config.spark_master)
+        val sys_config = config.system
+        println("config.spark_master: " + sys_config.spark_master)
 
-        val ssc = new StreamingContext(config.spark_master, config.task_name, Seconds(config.stream_duration), config.spark_home, config.jars)
+        val ssc = new StreamingContext(sys_config.spark_master, sys_config.task_name, Seconds(sys_config.stream_duration), sys_config.spark_home, sys_config.jars)
         ssc.checkpoint("checkpoint")
 
         // build and start the job
@@ -68,27 +69,30 @@ object App {
       println("Processor: " + proc.toString)
       (proc, createClass[com.ripjar.spark.process.Processor](proc.classname))
 
-    }).foldLeft(Map[String, Any]())((map: Map[String, Any], item: (ProcessorCfg, Any)) => {
+    }).foldLeft(Map[String, Any]())((map: Map[String, Any], item: (ProcessorConfig, Any)) => {
       map ++ Map(item._1.id -> item)
     })
 
     // instantiate processors
     val instances: Map[String, Any] = config.instances.map(inst => {
       println("Instance: " + inst.toString)
-      val (procConfig: ProcessorCfg, klass: Class[Processor]) = processors.get(inst.processId) match {
+      val (procConfig: ProcessorConfig, klass: Class[Processor]) = processors.get(inst.processId) match {
         case Some(id) => id
         case _ => throw new SparkJobException("Cannot find a process with id %s, required for instance %s.".format(inst.processId, inst.id), SparkJobErrorType.InvalidConfig)
       }
 
       // copy defaults and instance options
-      (inst.id, inst.copy(parameters = procConfig.parameters ++ inst.parameters), klass)
+      val newConfig = inst.copy(parameters = procConfig.parameters ++ inst.parameters)
+      newConfig.data = inst.data // hacking it for now. Need to find out how to make copy copy the fields
+
+      (inst.id, newConfig, klass)
 
     }).map(tuple => {
       val klass = tuple._3
 
       println("Instantiating: " + klass)
 
-      val proc = klass.getDeclaredConstructor(classOf[Instance]).newInstance(tuple._2)
+      val proc = klass.getDeclaredConstructor(classOf[InstanceConfig]).newInstance(tuple._2)
 
       (tuple._1, proc)
 
@@ -101,10 +105,10 @@ object App {
       println("Source: " + src.toString)
       val srcClass: Class[Source] = createClass[Source](src.classname)
 
-      val srcInstance = srcClass.getDeclaredConstructor(classOf[SourceCfg], classOf[StreamingContext]).newInstance(src, ssc)
+      val srcInstance = srcClass.getDeclaredConstructor(classOf[SourceConfig], classOf[StreamingContext]).newInstance(src, ssc)
 
       (src, srcInstance)
-    }).foldLeft(instances)((map: Map[String, Any], item: (SourceCfg, Any)) => {
+    }).foldLeft(instances)((map: Map[String, Any], item: (SourceConfig, Any)) => {
       map ++ Map(item._1.id -> item._2)
     })
 

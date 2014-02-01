@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 import org.apache.spark.streaming.dstream.DStream
 import java.util.Properties
 import kafka.producer._
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 import com.ripjar.spark.process.Processor
 
 /*
@@ -50,7 +50,7 @@ object Kafka {
   }
 }
 
-class Kafka(config: Instance) extends Processor with Serializable {
+class Kafka(config: InstanceConfig) extends Processor with Serializable {
 
   val route: String = config.getMandatoryParameter("route")
   val brokers: String = config.getMandatoryParameter("brokers")

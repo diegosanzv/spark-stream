@@ -6,7 +6,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.Boolean
 import org.apache.spark.streaming.dstream.DStream
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 
 object ExternalZeroMQ {
   val logger = LoggerFactory.getLogger(classOf[ExternalZeroMQ])
@@ -23,7 +23,7 @@ object ExternalZeroMQ {
  *
  */
 // TODO: Handle timeouts / failures
-class ExternalZeroMQ(config: Instance) extends Processor with Serializable {
+class ExternalZeroMQ(config: InstanceConfig) extends Processor with Serializable {
   val connectStr = config.getMandatoryParameter("connectStr")
 
   override def process(input: DStream[DataItem]): DStream[DataItem] = {

@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 import com.ripjar.product.orac.analytic.FeatureExtraction
 import com.ripjar.product.orac.analytic.process.FeatureProcessor
 import scala.collection.JavaConversions
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 import java.util.{ Map => JMap }
 import java.util.{ HashMap => JHashMap }
 import java.lang.{ String => JString }
@@ -51,7 +51,7 @@ object LegacyFeatureEnrich {
 }
 
 // Performs enrichment using methods form MM phase 1
-class LegacyFeatureEnrich(config: Instance) extends Processor with Serializable {
+class LegacyFeatureEnrich(config: InstanceConfig) extends Processor with Serializable {
 
   val resources = config.getMandatoryParameter("resources")
   val defaultTextPath = DataItem.toPathElements(config.getMandatoryParameter("input"))

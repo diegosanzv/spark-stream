@@ -2,7 +2,7 @@ package com.ripjar.spark.source
 
 import org.apache.spark.streaming.dstream.DStream
 import com.ripjar.spark.data.DataItem
-import com.ripjar.spark.job.SourceCfg
+import com.ripjar.spark.job.SourceConfig
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.kafka.KafkaUtils
 import org.apache.spark.storage.StorageLevel
@@ -32,7 +32,7 @@ object Kafka {
 
 }
 
-class Kafka(config: SourceCfg, ssc: StreamingContext) extends Source {
+class Kafka(config: SourceConfig, ssc: StreamingContext) extends Source {
 
   val group = config.getMandatoryParameter("group")
   val zkQuorum = config.getMandatoryParameter("zkQuorum")

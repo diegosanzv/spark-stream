@@ -23,7 +23,7 @@ import com.ripjar.spark.process.Processor
 // TODO: It is possible that task specifies further saving parameters. 
 // If this is the case then will need to store an array of locations and pick the file based on that.
 // Possibly having a filter matching the tasks
-class File(config: Instance) extends Processor {
+class File(config: InstanceConfig) extends Processor {
   val file = config.getMandatoryParameter("file")
   val asObject = config.getParameter("asObject", "false").toBoolean
 

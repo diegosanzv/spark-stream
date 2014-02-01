@@ -2,7 +2,7 @@ package com.ripjar.spark.process
 
 import com.ripjar.spark.data._
 import org.apache.spark.streaming.dstream.DStream
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import com.ripjar.spark.job.SparkJobException
@@ -29,7 +29,7 @@ object Filter {
   val path: List[String] = DataItem.toPathElements("tasks.filter")
 }
 
-class Filter(config: Instance) extends Processor with Serializable {
+class Filter(config: InstanceConfig) extends Processor with Serializable {
 
   private def parseJson(json: String): FilterConfig = {
     val jvRoot: JValue = parse(json)

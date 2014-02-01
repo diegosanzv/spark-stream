@@ -6,7 +6,7 @@ import org.elasticsearch.client.Client
 import org.elasticsearch.node.Node
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import com.ripjar.spark.job.Instance
+import com.ripjar.spark.job.InstanceConfig
 import org.apache.spark.streaming.dstream.DStream
 import com.ripjar.spark.data._
 import com.ripjar.spark.process.Processor
@@ -59,7 +59,7 @@ class ElasticsearchConfig(val cluster: String, val index: String, val doctype: S
   val hash = cluster + ":" + index + ":" + doctype
 }
 
-class Elasticsearch(config: Instance) extends Processor with Serializable {
+class Elasticsearch(config: InstanceConfig) extends Processor with Serializable {
 
   val elasticConfig = new ElasticsearchConfig(
     config.getMandatoryParameter("cluster"),
