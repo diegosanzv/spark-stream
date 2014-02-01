@@ -37,7 +37,7 @@ object App {
     println(">>>>>>>>>>>>>>>>>>" + args.mkString(","))
     parser.parse(args, AppConfig()) map { appconfig =>
       if (appconfig.start) {
-        val config = Config.parseJsonFile(config.configFile)
+        val config = Config.parseJsonFile(appconfig.configFile)
 
         System.getProperties.setProperty("spark.cleaner.ttl", "7200")
 

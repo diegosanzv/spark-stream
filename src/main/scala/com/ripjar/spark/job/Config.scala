@@ -25,14 +25,15 @@ import com.ripjar.spark.job.AppConfig
 import com.ripjar.spark.job.Flow
 import com.ripjar.spark.job.Instance
 import scala.Some
+import java.io.File
 import com.ripjar.spark.job.SparkJobException
 
 object Config {
-  def parseJsonFile(jsonFile: String): StreamConfig = {
+  def parseJsonFile(jsonFile: File): StreamConfig = {
     val json = try {
       scala.io.Source.fromFile(jsonFile).mkString
     } catch {
-      case e: Exception => throw new SparkJobException("Cannot read JSON config file: %s".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
+      case e: Exception => throw new SparkJobException("Cannot read JSON config file: %s".format(jsonFile.getName), SparkJobErrorType.InvalidConfig)
     }
     val jvRoot: JValue = parse(json)
 
@@ -42,7 +43,7 @@ object Config {
         joRoot.extract[StreamConfig]
       }
       case _ => {
-        throw new SparkJobException("Cannot parse the JSON config file: ".format(config.configFile.getName), SparkJobErrorType.InvalidConfig)
+        throw new SparkJobException("Cannot parse the JSON config file: ".format(jsonFile.getName), SparkJobErrorType.InvalidConfig)
 
       }
     }
