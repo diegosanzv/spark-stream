@@ -38,17 +38,33 @@ object DataItem {
         case v: Array[Boolean] => di.put(kv._1, new BooleanList(v.toList))
         case v: Array[Long] => di.put(kv._1, new LongList(v.toList))
         case v: Array[Double] => di.put(kv._1, new DoubleList(v.toList))
+        case v: List[Double] => di.put(kv._1, new DoubleList(v.toList))
         case v: Array[String] => di.put(kv._1, new StringList(v.toList))
         case v: List[Map[String, Any]] => di.put(kv._1, new DataItemList(v.map(x => DataItem.fromMap(x))))
+        case null => di.put(kv._1, "")
 
         case x: Any => logger.warn(kv._1, kv._2, x.toString)
-        case _ => throw new RuntimeException("Not implmented DataObject mapping from type")
+        case d => throw new RuntimeException("Not implemented DataObject mapping from type: " + d)
       }
     })
     di
   }
 
+  // TODO: this whole parsing needs to be reimplemented by manual walking of the object.
   def fromJson(json: String): DataItem = {
+    // Because JSON does not handle longs well
+    // TODO: probably need to do some proper parsing instead of this.
+    var myNum = { input : String =>
+      if(input.indexOf('.') > -1){
+        java.lang.Double.parseDouble(input)
+      } else {
+        java.lang.Long.parseLong(input)
+      }
+    }
+
+    scala.util.parsing.json.JSON.globalNumberParser = myNum
+    scala.util.parsing.json.JSON.perThreadNumberParser = myNum
+
     scala.util.parsing.json.JSON.parseFull(json) match {
       case (Some(map: Map[String, Any])) => fromMap(map)
       case _ => new DataItem
