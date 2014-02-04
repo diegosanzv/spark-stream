@@ -52,7 +52,7 @@
             "id": "trend",
             "classname": "com.ripjar.spark.process.Trending",
             "parameters": {
-                "input": "status"
+                "input": "dataset.tweet.text"
             }
         },
         {
@@ -136,9 +136,8 @@
             "id": "kafka_trending",
             "sequence": [
                 "kafka-tweet",
-		        "log",
                 "trend",
-                "log2",
+                "log",
                 "kafka_trend_store"
             ]
         }

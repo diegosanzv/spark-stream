@@ -154,6 +154,7 @@ class DataItem() extends Serializable {
   def get(key: String): Option[Any] = {
     valueMap.get(key)
   }
+
   def get(path: List[String]): Option[Any] = {
     path match {
       case h :: Nil => get(h)
@@ -186,7 +187,7 @@ class DataItem() extends Serializable {
     valueMap.get(key) match {
       case Some(v: T) => Some(v)
       case Some(x) => {
-        DataItem.logger.warn("Found field '%s' of the wrong type: %s".format(key, x.getClass.getName()));
+        DataItem.logger.warn("Found field '%s' of the wrong type: %s".format(key, x.getClass.getName()))
         None
       }
       case None => None
@@ -194,12 +195,12 @@ class DataItem() extends Serializable {
   }
   def getTyped[T: ClassTag](path: List[String]): Option[T] = {
     path match {
-      case h :: Nil => getTyped[T](h)
+      case Nil    => None
       case h :: t => get(h) match {
-        case Some(c: DataItem) => c.getTyped[T](t)
+        case Some(subItem: DataItem) => subItem.getTyped[T](t)
+        case Some(item: T) => Some(item)
         case _ => None
       }
-      case _ => None
     }
   }
 

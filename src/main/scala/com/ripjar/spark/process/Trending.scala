@@ -48,6 +48,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       }
     }).flatMap(status => {
       // Generate words
+      // TODO: Looks like twitter already gives us the tags at dataset.tweet.entities.hastags array
 
       status.split(splitOn)
     }).filter(word => {
