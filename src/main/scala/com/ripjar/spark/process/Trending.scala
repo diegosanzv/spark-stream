@@ -43,8 +43,8 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       // make sure the Strings are not empty
 
       input.getTyped[String](inputPath) match {
-        case None => ""
-        case n => n.toString
+        case Some(n) => n.toString
+        case _ => ""
       }
     }).flatMap(status => {
       // Generate words
@@ -54,7 +54,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
     }).filter(word => {
       // get those words starting with #
 
-      word.matches(matchOn)
+      word.startsWith("#")
     }).map(tag => {
       // Convert words into tuples
       (tag, 1)

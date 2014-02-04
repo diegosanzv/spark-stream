@@ -45,6 +45,13 @@
                 "numThreads": "2",
                 "binary": "false"
             }
+        },
+        {
+            "id": "sample",
+            "classname": "com.ripjar.spark.source.Filesystem",
+            "parameters": {
+                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples"
+            }
         }
     ],
     "processors": [
@@ -135,7 +142,7 @@
        {
             "id": "kafka_trending",
             "sequence": [
-                "kafka-tweet",
+                "sample",
                 "trend",
                 "log",
                 "kafka_trend_store"
