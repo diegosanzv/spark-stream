@@ -2,7 +2,7 @@ package com.ripjar.spark.data
 
 import com.github.nscala_time.time.Imports.DateTime
 
-trait DataList
+trait DataList extends Serializable
 
 class StringList(val value: List[String]) extends DataList { override def toString(): String = value.mkString("[", ",", "]") }
 

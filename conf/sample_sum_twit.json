@@ -10,7 +10,7 @@
    	"stream_duration": 1,
   	"jars": [
         	"./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
-	]
+	    ]
     },
 
     "sources": [
@@ -125,6 +125,22 @@
             }
         },
         {
+            "id": "summarize",
+            "processId": "summarize",
+            "parameters": {
+                "unique_key": "dataset.tweet.user.id_str"
+            },
+
+            "data": [
+                {
+                    "source": "dataset.tweet.text",
+                    "destination": "tweet",
+                    "function": "store",
+                    "retention": 1
+                }
+            ]
+        },
+        {
             "id": "elastic",
             "processId": "elastic",
             "parameters": {
@@ -139,7 +155,7 @@
             "id": "kafka_trending",
             "sequence": [
                 "sample",
-                "trend",
+                "summarize",
                 "log",
                 "kafka_trend_store"
             ]
