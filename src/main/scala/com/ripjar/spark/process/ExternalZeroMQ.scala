@@ -34,6 +34,6 @@ class ExternalZeroMQ(config: InstanceConfig) extends Processor with Serializable
     val zmqWorker: ZMQWorker = new ZMQWorker
     val json = input.toString
     val rtn = zmqWorker.doWork(connectStr, json)
-    DataItem.fromJson(rtn)
+    DataItem.fromJSON(rtn)
   }
 }

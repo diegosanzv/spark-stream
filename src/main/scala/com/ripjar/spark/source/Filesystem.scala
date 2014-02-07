@@ -13,7 +13,7 @@ class Filesystem(config: SourceConfig, ssc: StreamingContext) extends Source {
 
   def stream() : DStream[DataItem] = {
     ssc.textFileStream(dir).map( (json: String) => {
-      DataItem.fromJson(json)
+      DataItem.fromJSON(json)
     })
   }
 }

@@ -20,15 +20,12 @@ object Kafka {
   def parseBinaryInput(raw: Array[Byte]): DataItem = {
     val pr = ProcessRequestSerializer.inflate(raw, true)
     val json = pr.getMetadata().toString()
-    val dataitem = DataItem.fromJson(json)
-    //TODO: store raw
-    /*if (pr.getData() != null)
-      dataitem.raw = pr.getData.array()*/
-    dataitem
+
+    DataItem.fromJSON(json, null, raw)
   }
 
   def parseTextInput(json: String): DataItem = {
-    DataItem.fromJson(json)
+    DataItem.fromJSON(json)
   }
 
 }

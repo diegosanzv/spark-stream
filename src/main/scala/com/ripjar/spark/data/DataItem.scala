@@ -39,7 +39,7 @@ class ItemPath(val key: String) extends Serializable {
 object DataItem {
   val logger = LoggerFactory.getLogger("DataObject")
 
-  def fromMap(mergeMap: Map[String, Any]): DataItem = {
+  /*def fromMap(mergeMap: Map[String, Any]): DataItem = {
     val di = new NestedDataItem
     mergeMap.foreach(kv => {
       kv._2 match {
@@ -64,7 +64,7 @@ object DataItem {
   }
 
   // TODO: this whole parsing needs to be reimplemented by manual walking of the object.
-  def fromJson(json: String): DataItem = {
+  def fromJson(json: String, template: DataItem = null, raw: Array[Byte] = null): DataItem = {
     // Because JSON does not handle longs well
     // TODO: probably need to do some proper parsing instead of this.
     val myNum = { input : String =>
@@ -82,7 +82,7 @@ object DataItem {
       case (Some(map: Map[String, Any])) => fromMap(map)
       case _ => new NestedDataItem
     }
-  }
+  }*/
 
   def jsonToMap(json: String): Option[Any] = {
     val myNum = { input : String =>
@@ -142,19 +142,15 @@ object DataItem {
 
   def create(template: DataItem = null, raw: Array[Byte] = null): DataItem = {
     template match {
-      case di: NestedDataItem => new NestedDataItem()
+      case di: NestedDataItem => new NestedDataItem(raw)
       case di: HashDataItem => new HashDataItem(raw)
       case _ => new HashDataItem(raw)
     }
   }
-}
 
-object HashDataItem {
-  val logger = LoggerFactory.getLogger("HashDataItem")
-
-  def fromMap(map: Map[String, Any]): DataItem = {
-    map.foldLeft[HashDataItem](new HashDataItem(null))( (di, pair) => {
-      val key: String = pair._1
+  def fromMap(map: Map[String, Any], template: DataItem = null, raw: Array[Byte] = null): DataItem = {
+    map.foldLeft[DataItem](create(template, raw))( (di, pair) => {
+      val key = new ItemPath(pair._1)
       val value: Any = pair._2
 
       value match {
@@ -177,7 +173,7 @@ object HashDataItem {
         }
         case null => di.put(key, "")
 
-        case x: Any => logger.warn(key, value, x.toString)
+        case x: Any => logger.warn(key.key, value, x.toString)
         case d => throw new RuntimeException("Not implemented DataObject mapping from type: " + d)
       }
 
@@ -185,13 +181,13 @@ object HashDataItem {
     })
   }
 
-  def fromJSON(json: String): DataItem = {
-    val map = DataItem.jsonToMap(json) match {
+  def fromJSON(json: String, template: DataItem = null, raw: Array[Byte] = null): DataItem = {
+    val map = jsonToMap(json) match {
       case (Some(maps: Map[String, Any])) => maps
       case _ => Map[String, Any]()
     }
 
-    fromMap(map)
+    fromMap(map, template, raw)
   }
 }
 
@@ -273,9 +269,8 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
 //TODO: This interface gives the sort of functionality I think we want but performance may be an issue
 // For now I'll leave as is 
 // Simple flattening may work ... but an area of complexity is getting items from a list a.b.c[3].d.e
-private class NestedDataItem() extends DataItem {
+private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
 
-  var raw: Array[Byte] = null
   private val valueMap = new HashMap[String, Any]
 
   def getRaw(): Array[Byte] = raw
