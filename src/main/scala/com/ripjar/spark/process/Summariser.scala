@@ -6,6 +6,7 @@ import com.ripjar.spark.job.{SparkJobErrorType, SparkJobException, InstanceConfi
 import org.apache.spark.streaming.StreamingContext._
 import org.json4s.DefaultFormats
 import org.json4s.JsonAST.JValue
+import scala.reflect.ClassTag
 
 /*
  * Creates summaizations from the stream
@@ -61,20 +62,46 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
     Some(state_item)
   }
 
-  def track(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    val trackedList: List[Any] = state.get[List[String]](si.destination_path) match {
-      case Some(x) => x
-      case _       => List[Any]()
+  // summarization functions
+  //
+  def basic_summary[U: ClassTag, T: Manifest](si: SumItem, value: DataItem, state: DataItem, func: ((U, T) => T), newState: () => T): DataItem = {
+    val tracked: T = state.get[T](si.destination_path) match {
+      case Some(x: T) => x
+      case _       => newState() // for some reason manifest doesn't work with lists.
     }
 
-    value.get[String](si.source_path) match {
+    value.get[U](si.source_path) match {
       case Some(v) => {
-        state.put(si.destination_path, v :: trackedList)
+        state.put(si.destination_path, func(v, tracked))
       }
 
       case _ => None
     }
 
+    state
+  }
+
+  def track(si: SumItem, value: DataItem, state: DataItem): DataItem = {
+    basic_summary[String, List[String]](si, value, state, (s_val, d_val) => {
+      (s_val :: d_val).take(si.retention)
+    }, () => {
+      List[String]()
+    })
+  }
+
+  def set(si: SumItem, value: DataItem, state: DataItem): DataItem = {
+    state
+  }
+
+  def sum(si: SumItem, value: DataItem, state: DataItem): DataItem = {
+    state
+  }
+
+  def max(si: SumItem, value: DataItem, state: DataItem): DataItem = {
+    state
+  }
+
+  def min(si: SumItem, value: DataItem, state: DataItem): DataItem = {
     state
   }
 }
