@@ -57,7 +57,7 @@ class Filter(config: InstanceConfig) extends Processor with Serializable {
           // regexes filter based on a match
           case "regex" => {
             stream.filter(item => {
-              item.getTyped[String](filtr.field) match {
+              item.get[String](new ItemPath(filtr.field)) match {
                 case Some(x) => !x.matches(filtr.condition)
                 case _ => true
               }
@@ -67,7 +67,7 @@ class Filter(config: InstanceConfig) extends Processor with Serializable {
           // outs remove the fields from a data item. It's really a mapping
           case "out" => {
             stream.map(item => {
-              item.remove(filtr.field)
+              item.remove(new ItemPath(filtr.field))
 
               item
             })

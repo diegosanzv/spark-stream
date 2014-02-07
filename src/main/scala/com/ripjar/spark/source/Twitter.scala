@@ -22,6 +22,7 @@ import com.typesafe.config.ConfigFactory
 class Twitter(val config: SourceConfig, val ssc: StreamingContext) extends Source {
 
   val logger = LoggerFactory.getLogger("TwitterSource")
+  val statusPath = new ItemPath("status")
 
   System.setProperty("twitter4j.oauth.consumerKey", config.getMandatoryParameter("consumer_key"))
   System.setProperty("twitter4j.oauth.consumerSecret", config.getMandatoryParameter("consumer_secret"))
@@ -32,9 +33,9 @@ class Twitter(val config: SourceConfig, val ssc: StreamingContext) extends Sourc
     println("Twitter stream requested")
 
     TwitterUtils.createStream(ssc, None).map(status => {
-      val item = new DataItem()
+      val item = DataItem.create(null)
 
-      item.put("status", status.getText())
+      item.put(statusPath, status.getText())
 
       item
     })

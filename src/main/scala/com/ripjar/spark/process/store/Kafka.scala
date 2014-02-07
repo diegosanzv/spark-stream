@@ -54,7 +54,7 @@ class Kafka(config: InstanceConfig) extends Processor with Serializable {
 
   val route: String = config.getMandatoryParameter("route")
   val brokers: String = config.getMandatoryParameter("brokers")
-  val taskRoutePath = DataItem.toPathElements("task.kafka.route")
+  val taskRoutePath = new ItemPath("task.kafka.route")
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(store(_))
@@ -63,7 +63,7 @@ class Kafka(config: InstanceConfig) extends Processor with Serializable {
   def store(input: DataItem): DataItem = {
     val data = input.toString.getBytes()
 
-    val r = input.getTyped[String](taskRoutePath) match {
+    val r = input.get[String](taskRoutePath) match {
       case Some(p) => p
       case _ => route
     }

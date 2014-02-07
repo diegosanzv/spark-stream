@@ -30,7 +30,7 @@ import org.apache.spark.streaming.dstream.DStream
  */
 class Trending(config: InstanceConfig) extends Processor with Serializable {
 
-  val inputPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
+  val inputPath = new ItemPath(config.getMandatoryParameter("input"))
   val duration = config.getMandatoryParameter("duration").toInt
   val slide_duration = config.getMandatoryParameter("slide_duration").toInt
 
@@ -42,7 +42,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
     stream.map(input => {
       // make sure the Strings are not empty
 
-      input.getTyped[String](inputPath) match {
+      input.get[String](inputPath) match {
         case Some(n) => n.toString
         case _ => ""
       }
@@ -77,8 +77,8 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       rdd.filter( (p:(Int, String)) => {
         p._1 >= average
       }).map( (p: (Int, String)) => {
-        val item = new DataItem()
-        item.put(p._2, p._1)
+        val item = DataItem.create(null)
+        item.put(new ItemPath(p._2), p._1)
 
         item
       })

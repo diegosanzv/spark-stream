@@ -117,8 +117,8 @@ class TextExtract(config: InstanceConfig) extends Processor with Serializable {
   }
 
   def extract(input: DataItem): DataItem = {
-    if (input.raw != null) {
-      extract(input.raw, input)
+    if (input.getRaw() != null) {
+      extract(input.getRaw(), input)
     }
     input
   }
@@ -127,15 +127,15 @@ class TextExtract(config: InstanceConfig) extends Processor with Serializable {
 
     val result = extract(new ByteArrayInputStream(raw))
 
-    val metadata = new DataItem
-    val extras = new DataItem
+    val metadata = DataItem.create(null)
+    val extras = DataItem.create(null)
 
-    result._2.map(mt => metadata.put(mt._1, mt._2))
-    result._3.map(mt => extras.put(mt._1, mt._2))
+    result._2.map(mt => metadata.put(new ItemPath(mt._1), mt._2))
+    result._3.map(mt => extras.put(new ItemPath(mt._1), mt._2))
 
-    dataset.put("text", result._1)
-    dataset.put("metadata", metadata)
-    dataset.put("text_extra", extras)
+    dataset.put(new ItemPath("text"), result._1)
+    dataset.put(new ItemPath("metadata"), metadata)
+    dataset.put(new ItemPath("text_extra"), extras)
   }
 
   private def extract(stream: InputStream): (String, Map[String, String], Map[String, String]) = {

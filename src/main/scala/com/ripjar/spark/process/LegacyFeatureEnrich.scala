@@ -54,19 +54,19 @@ object LegacyFeatureEnrich {
 class LegacyFeatureEnrich(config: InstanceConfig) extends Processor with Serializable {
 
   val resources = config.getMandatoryParameter("resources")
-  val defaultTextPath = DataItem.toPathElements(config.getMandatoryParameter("input"))
-  val taskTextPath = DataItem.toPathElements("task.enrich.field")
+  val defaultTextPath = new ItemPath(config.getMandatoryParameter("input"))
+  val taskTextPath = new ItemPath("task.enrich.field")
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(enrich(_))
   }
 
   def enrich(item: DataItem): DataItem = {
-    val textOption: Option[String] = item.getTyped[String](taskTextPath) match {
+    val textOption: Option[String] = item.get[String](taskTextPath) match {
       case Some(path) => {
-        item.getTyped[String](DataItem.toPathElements(path))
+        item.get[String](new ItemPath(path))
       }
-      case _ => item.getTyped[String](defaultTextPath)
+      case _ => item.get[String](defaultTextPath)
     }
 
     textOption match {
@@ -75,7 +75,7 @@ class LegacyFeatureEnrich(config: InstanceConfig) extends Processor with Seriali
         lm.put("message", value)
         LegacyFeatureEnrich.getFeatureProcessor(resources).process(lm)
         lm.remove("message")
-        item.merge(lm)
+        DataItem.merge(item, lm)
       }
       case _ => //Do nothing
     }

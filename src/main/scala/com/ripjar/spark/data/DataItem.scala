@@ -17,6 +17,23 @@ import java.lang.{ Long => JLong }
 import java.lang.{ String => JString }
 import java.lang.{ Object => JObject }
 
+// all the DataItem representations must implement this trait.
+trait DataItem extends Serializable {
+  def getRaw(): Array[Byte] = null
+
+  def get[T: ClassTag](key: ItemPath): Option[T]
+  def getMandatory[T: ClassTag](key: ItemPath): T
+
+  def put(key: ItemPath, value: Any)
+
+  def remove(key: ItemPath): Option[Any]
+}
+
+// container for a pre-parsed path object.
+class ItemPath(val key: String) extends Serializable {
+  var internal: Any = null
+}
+
 object DataItem {
   val logger = LoggerFactory.getLogger("DataObject")
 
@@ -27,7 +44,7 @@ object DataItem {
   }
 
   def fromMap(mergeMap: Map[String, Any]): DataItem = {
-    val di = new DataItem
+    val di = new NestedDataItem
     mergeMap.foreach(kv => {
       kv._2 match {
         case child: Map[String, Any] => di.put(kv._1, DataItem.fromMap(child))
@@ -54,7 +71,7 @@ object DataItem {
   def fromJson(json: String): DataItem = {
     // Because JSON does not handle longs well
     // TODO: probably need to do some proper parsing instead of this.
-    var myNum = { input : String =>
+    val myNum = { input : String =>
       if(input.indexOf('.') > -1){
         java.lang.Double.parseDouble(input)
       } else {
@@ -67,60 +84,208 @@ object DataItem {
 
     scala.util.parsing.json.JSON.parseFull(json) match {
       case (Some(map: Map[String, Any])) => fromMap(map)
-      case _ => new DataItem
+      case _ => new NestedDataItem
     }
   }
 
+  def jsonToMap(json: String): Option[Any] = {
+    val myNum = { input : String =>
+      if(input.indexOf('.') > -1){
+        java.lang.Double.parseDouble(input)
+      } else {
+        java.lang.Long.parseLong(input)
+      }
+    }
+
+    scala.util.parsing.json.JSON.globalNumberParser = myNum
+    scala.util.parsing.json.JSON.perThreadNumberParser = myNum
+
+    scala.util.parsing.json.JSON.parseFull(json)
+  }
+
   def fromJava(jm: JMap[JString, JObject]): DataItem = {
-    val di = new DataItem
-    di.merge(jm)
+    val di = create(null)
+    merge(di, jm)
     di
+  }
+
+  def merge(di: DataItem, jmap: JMap[JString, JObject]) {
+    jmap.entrySet().foreach(entry => {
+      val key = new ItemPath(entry.getKey)
+
+      entry.getValue() match {
+        case s: JString => di.put(key, s)
+        case i: JInteger => di.put(key, i.intValue)
+        case f: JFloat => di.put(key, f.floatValue)
+        case d: JDouble => di.put(key, d.doubleValue)
+        case b: JBoolean => di.put(key, b.booleanValue)
+        case l: JLong => di.put(key, l.longValue)
+        case m: JMap[JString, JObject] => {
+          di.get(key) match {
+            case Some(sm: DataItem) => merge(sm, m)
+            case Some(_) => {
+              DataItem.logger.info("Changing type on: %s".format(entry.getKey))
+              di.put(key, DataItem.fromJava(m))
+            }
+            case None => {
+              di.put(key, DataItem.fromJava(m))
+            }
+          }
+        }
+        case l: JList[JString] => di.put(key, l.map(_.toString).toList)
+        case l: JList[JInteger] => di.put(key, l.map(_.intValue.toLong).toList)
+        case l: JList[JFloat] => di.put(key, l.map(_.floatValue.toDouble).toList)
+        case l: JList[JDouble] => di.put(key, l.map(_.doubleValue).toList)
+        case l: JList[JBoolean] => di.put(key, l.map(_.booleanValue).toList)
+        case l: JList[JLong] => di.put(key,l.map(_.longValue).toList)
+        case l: JList[JMap[JString, JObject]] => di.put(key, l.map(jm => fromJava(jm)).toList)
+        case _ => throw new RuntimeException("Not implmented DataObject mapping from type during merge: " + entry.getValue.getClass.getName)
+      }
+    })
+  }
+
+  def create(template: DataItem): DataItem = {
+    template match {
+      case di: NestedDataItem => new NestedDataItem()
+      case di: HashDataItem => new HashDataItem()
+      case _ => new HashDataItem()
+    }
+  }
+}
+
+object HashDataItem {
+  val logger = LoggerFactory.getLogger("HashDataItem")
+
+  def makeItemPath(key: String) : List[String] = {
+    key.split("\\.").toList
+  }
+
+  def fromMap(map: Map[String, Any]): DataItem = {
+    map.foldLeft[HashDataItem](new HashDataItem)( (di, pair) => {
+      val key: String = pair._1
+      val value: Any = pair._2
+
+      value match {
+        case child: Map[String, Any] => di.put(key, fromMap(child))
+        case v: Boolean => di.put(key, v)
+        case v: Long => di.put(key, v)
+        case v: Double => di.put(key, v)
+        case v: String => di.put(key, v)
+        case v: Array[Boolean] => di.put(key, v.toList)
+        case v: Array[Long] => di.put(key, v.toList)
+        case v: Array[Double] => di.put(key, v.toList)
+        case v: List[Double] => di.put(key, v.toList)
+        case v: Array[String] => di.put(key, v.toList)
+        case v: List[Map[String, Any]] => {
+          val items = v.map(obj => {
+            fromMap(obj)
+          })
+
+          di.put(key, items)
+        }
+        case null => di.put(key, "")
+
+        case x: Any => logger.warn(key, value, x.toString)
+        case d => throw new RuntimeException("Not implemented DataObject mapping from type: " + d)
+      }
+
+      di
+    })
+  }
+
+  def fromJSON(json: String): DataItem = {
+    val map = DataItem.jsonToMap(json) match {
+      case (Some(maps: Map[String, Any])) => maps
+      case _ => Map[String, Any]()
+    }
+
+    fromMap(map)
+  }
+}
+
+private class HashDataItem extends HashMap[String, Any] with DataItem {
+
+  // convert to specific represenation of key
+  def get[T: ClassTag](key: ItemPath): Option[T] = get[T](HashDataItem.makeItemPath(key.key))
+
+  def put(key: ItemPath, value: Any) {
+    put(HashDataItem.makeItemPath(key.key), value)
+  }
+
+  def get[T: ClassTag](key: List[String]): Option[T] = {
+    key match {
+      case Nil          => None // not found
+      case head :: path => {
+        get(head) match {
+          case Some(di: HashDataItem) => di.get(path) // recursively search
+          case Some(x: T)  => Some(x)
+          case _           => None
+        }
+      }
+    }
+  }
+
+  def getMandatory[T: ClassTag](key: ItemPath): T = {
+    this.get[T](key) match {
+      case Some(v: T) => v
+      case _          => throw DataItemException("Field: '%s'.".format(key), DataItemErrorType.CannotFindMandatoryField)
+    }
+  }
+
+  def put(key: List[String], value: Any) {
+    key match {
+      case Nil => None
+      case head :: Nil => {
+        put(head, value)
+      }
+
+      case head :: path => {
+        val next = get(head) match {
+          case Some(di: HashDataItem) => di
+          case _ => new HashDataItem()
+        }
+
+        next.put(path, value)
+        put(head, value)
+      }
+    }
+  }
+
+  def remove(key: ItemPath): Option[Any] = {
+    remove(HashDataItem.makeItemPath(key.key))
+  }
+
+  def remove(key: List[String]): Option[Any] = {
+    key match {
+      case Nil          => None
+      case head :: Nil => {
+        remove(head)
+      }
+      case head :: path => {
+        get(head) match {
+          case Some(item: HashDataItem) => item.remove(path)
+          case Some(x) => remove(head)
+          case None    => None
+        }
+      }
+    }
   }
 }
 
 //TODO: This interface gives the sort of functionality I think we want but performance may be an issue
 // For now I'll leave as is 
 // Simple flattening may work ... but an area of complexity is getting items from a list a.b.c[3].d.e
-class DataItem() extends Serializable {
+private class NestedDataItem() extends DataItem {
 
   var raw: Array[Byte] = null
   private val valueMap = new HashMap[String, Any]
 
-  def merge(jmap: JMap[JString, JObject]) {
-    jmap.entrySet().foreach(entry => {
-      entry.getValue() match {
-        case s: JString => put(entry.getKey, s)
-        case i: JInteger => put(entry.getKey, i.intValue)
-        case f: JFloat => put(entry.getKey, f.floatValue)
-        case d: JDouble => put(entry.getKey, d.doubleValue)
-        case b: JBoolean => put(entry.getKey, b.booleanValue)
-        case l: JLong => put(entry.getKey, l.longValue)
-        case m: JMap[JString, JObject] => {
-          valueMap.get(entry.getKey) match {
-            case Some(sm: DataItem) => sm.merge(m)
-            case Some(_) => {
-              DataItem.logger.info("Changing type on: %s".format(entry.getKey))
-              put(entry.getKey, DataItem.fromJava(m))
-            }
-            case None => {
-              put(entry.getKey, DataItem.fromJava(m))
-            }
-          }
-        }
-        case l: JList[JString] => put(entry.getKey, new StringList(l.map(_.toString).toList))
-        case l: JList[JInteger] => put(entry.getKey, new LongList(l.map(_.intValue.toLong).toList))
-        case l: JList[JFloat] => put(entry.getKey, new DoubleList(l.map(_.floatValue.toDouble).toList))
-        case l: JList[JDouble] => put(entry.getKey, new DoubleList(l.map(_.doubleValue).toList))
-        case l: JList[JBoolean] => put(entry.getKey, new BooleanList(l.map(_.booleanValue).toList))
-        case l: JList[JLong] => put(entry.getKey, new LongList(l.map(_.longValue).toList))
-        case l: JList[JMap[JString, JObject]] => put(entry.getKey, new DataItemList(l.map(jm => DataItem.fromJava(jm)).toList))
-        case _ => throw new RuntimeException("Not implmented DataObject mapping from type during merge: " + entry.getValue.getClass.getName)
-      }
-    })
-  }
-
   def getMap(): Map[String, Any] = {
     valueMap.toMap
+  }
+
+  def put(key: String, value: List[Any]) = {
+    valueMap.put(key, value)
   }
 
   def put(key: String, value: DataList): Unit = {
@@ -151,32 +316,53 @@ class DataItem() extends Serializable {
     valueMap.remove(key)
   }
 
+  def remove(key: ItemPath): Option[Any] = {
+    valueMap.remove(key.key)
+  }
+
   def get(key: String): Option[Any] = {
     valueMap.get(key)
+  }
+
+  def getItem[T: ClassTag](key: String): Option[T] = {
+    getTyped[T](DataItem.toPathElements(key))
+  }
+
+  def get[T: ClassTag](key: ItemPath): Option[T] = {
+    getTyped[T](DataItem.toPathElements(key.key))
+  }
+
+  def putItem(key: String, value: Any) = {
+    put(key, value.toString)
+  }
+
+  def put(key: ItemPath, value: Any) = {
+    put(key.key, value.toString)
   }
 
   def get(path: List[String]): Option[Any] = {
     path match {
       case h :: Nil => get(h)
       case h :: t => get(h) match {
-        case Some(c: DataItem) => c.get(t)
+        case Some(c: NestedDataItem) => c.get(t)
         case _ => None
       }
       case _ => None
     }
   }
 
-  def getMandatory(key: String): Any = {
-    get(key) match {
-      case Some(x) => x
+  def getMandatory[T: ClassTag](key: ItemPath): T = {
+    get[T](key) match {
+      case Some(x: T) => x
       case None => throw DataItemException("Field: '%s'.".format(key), DataItemErrorType.CannotFindMandatoryField)
     }
   }
+
   def getMandatory(path: List[String]): Any = {
     path match {
-      case h :: Nil => getMandatory(h)
+      case h :: Nil => getMandatory(new ItemPath(h))
       case h :: t => get(h) match {
-        case Some(c: DataItem) => c.getMandatory(t)
+        case Some(c: NestedDataItem) => c.getMandatory(t)
         case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
       }
       case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
@@ -197,7 +383,7 @@ class DataItem() extends Serializable {
     path match {
       case Nil    => None
       case h :: t => get(h) match {
-        case Some(subItem: DataItem) => subItem.getTyped[T](t)
+        case Some(subItem: NestedDataItem) => subItem.getTyped[T](t)
         case Some(item: T) => Some(item)
         case _ => None
       }
@@ -214,7 +400,7 @@ class DataItem() extends Serializable {
     path match {
       case h :: Nil => getMandatoryTyped[T](h)
       case h :: t => get(h) match {
-        case Some(c: DataItem) => c.getMandatoryTyped[T](t)
+        case Some(c: NestedDataItem) => c.getMandatoryTyped[T](t)
         case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
       }
       case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)

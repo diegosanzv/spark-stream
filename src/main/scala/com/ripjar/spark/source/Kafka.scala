@@ -21,8 +21,9 @@ object Kafka {
     val pr = ProcessRequestSerializer.inflate(raw, true)
     val json = pr.getMetadata().toString()
     val dataitem = DataItem.fromJson(json)
-    if (pr.getData() != null)
-      dataitem.raw = pr.getData.array()
+    //TODO: store raw
+    /*if (pr.getData() != null)
+      dataitem.raw = pr.getData.array()*/
     dataitem
   }
 
