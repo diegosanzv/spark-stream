@@ -16,10 +16,11 @@ import java.lang.{ Boolean => JBoolean }
 import java.lang.{ Long => JLong }
 import java.lang.{ String => JString }
 import java.lang.{ Object => JObject }
+import scala.collection.parallel.mutable
 
 // all the DataItem representations must implement this trait.
 trait DataItem extends Serializable {
-  def getRaw(): Array[Byte] = null
+  def getRaw(): Array[Byte]
 
   def get[T: ClassTag](key: ItemPath): Option[T]
   def getMandatory[T: ClassTag](key: ItemPath): T
@@ -144,11 +145,11 @@ object DataItem {
     })
   }
 
-  def create(template: DataItem): DataItem = {
+  def create(template: DataItem = null, raw: Array[Byte] = null): DataItem = {
     template match {
       case di: NestedDataItem => new NestedDataItem()
-      case di: HashDataItem => new HashDataItem()
-      case _ => new HashDataItem()
+      case di: HashDataItem => new HashDataItem(raw)
+      case _ => new HashDataItem(raw)
     }
   }
 }
@@ -161,7 +162,7 @@ object HashDataItem {
   }
 
   def fromMap(map: Map[String, Any]): DataItem = {
-    map.foldLeft[HashDataItem](new HashDataItem)( (di, pair) => {
+    map.foldLeft[HashDataItem](new HashDataItem(null))( (di, pair) => {
       val key: String = pair._1
       val value: Any = pair._2
 
@@ -203,7 +204,9 @@ object HashDataItem {
   }
 }
 
-private class HashDataItem extends HashMap[String, Any] with DataItem {
+private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] with DataItem {
+
+  def getRaw(): Array[Byte] = raw
 
   // convert to specific represenation of key
   def get[T: ClassTag](key: ItemPath): Option[T] = get[T](HashDataItem.makeItemPath(key.key))
@@ -242,7 +245,7 @@ private class HashDataItem extends HashMap[String, Any] with DataItem {
       case head :: path => {
         val next = get(head) match {
           case Some(di: HashDataItem) => di
-          case _ => new HashDataItem()
+          case _ => new HashDataItem(null)
         }
 
         next.put(path, value)
@@ -257,7 +260,7 @@ private class HashDataItem extends HashMap[String, Any] with DataItem {
 
   def remove(key: List[String]): Option[Any] = {
     key match {
-      case Nil          => None
+      case Nil         => None
       case head :: Nil => {
         remove(head)
       }
@@ -270,6 +273,10 @@ private class HashDataItem extends HashMap[String, Any] with DataItem {
       }
     }
   }
+
+  override def toString(): String = {
+    new scala.util.parsing.json.JSONObject(this.toMap).toString
+  }
 }
 
 //TODO: This interface gives the sort of functionality I think we want but performance may be an issue
@@ -279,6 +286,8 @@ private class NestedDataItem() extends DataItem {
 
   var raw: Array[Byte] = null
   private val valueMap = new HashMap[String, Any]
+
+  def getRaw(): Array[Byte] = raw
 
   def getMap(): Map[String, Any] = {
     valueMap.toMap
