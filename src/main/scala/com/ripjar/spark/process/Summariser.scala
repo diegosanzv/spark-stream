@@ -54,6 +54,8 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
       summations.foreach(si => {
         si.function match {
           case "track" => track(si, value, state_item)
+          case "set"   => set(si, value, state_item)
+          case "stat"  => stat(si, value, state_item)
           case f       => throw new SparkJobException("Unsupported summarization function: " + f, SparkJobErrorType.InvalidConfig)
         }
       })
@@ -90,19 +92,48 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   def set(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    state
+    basic_summary[String, List[String]](si, value, state, (s_val, d_val) => {
+      if(!d_val.contains(s_val)) {
+        (s_val :: d_val).take(si.retention)
+      } else {
+        d_val
+      }
+    }, () => {
+      List[String]()
+    })
   }
 
-  def sum(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    state
-  }
+  val sumPath = new ItemPath("sum")
+  val countPath = new ItemPath("count")
+  val maxPath = new ItemPath("max")
+  val minPath = new ItemPath("min")
 
-  def max(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    state
-  }
+  def stat(si: SumItem, value: DataItem, state: DataItem): DataItem = {
+    basic_summary[Int, DataItem](si, value, state, (s_val, d_val) => {
+      d_val.put(sumPath, d_val.get[Int](sumPath) match {
+        case Some(s) => s + s_val
+        case _       => 0
+      })
 
-  def min(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    state
+      d_val.put(countPath, d_val.get[Int](countPath) match {
+        case Some(s) => s + 1
+        case _       => 0
+      })
+
+      d_val.put(maxPath, d_val.get[Int](maxPath) match {
+        case Some(s) => Math.max(s, s_val)
+        case _       => Int.MinValue
+      })
+
+      d_val.put(minPath, d_val.get[Int](minPath) match {
+        case Some(s) => Math.min(s, s_val)
+        case _       => Int.MaxValue
+      })
+
+      d_val
+    }, () => {
+      DataItem.create(state)
+    })
   }
 }
 
