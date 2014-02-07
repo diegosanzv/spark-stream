@@ -18,7 +18,7 @@ import org.json4s.JsonAST.JValue
  *
  */
 class Summariser(config: InstanceConfig) extends Processor with Serializable {
-  val key = config.getMandatoryParameter("unique_key")
+  val key = new ItemPath(config.getMandatoryParameter("unique_key"))
   val summations = parseData(config.data)
 
   private def parseData(data: JValue): Array[SumItem] = {
@@ -28,14 +28,16 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
+    val key_path = new ItemPath("key")
+
     stream.map(item => {
-      (item.getMandatory[String](new ItemPath(key)), item)
+      (item.getMandatory[String](key), item)
     }).updateStateByKey[DataItem]((values: Seq[DataItem], state: Option[DataItem]) => {
       updateState(values, state)
     }).map(pair => {
       val item = pair._2
 
-      item.put(new ItemPath("key"), pair._1)
+      item.put(key_path, pair._1)
 
       item
     })
@@ -44,7 +46,7 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   def updateState(values: Seq[DataItem], state: Option[DataItem]): Option[DataItem] = {
     val state_item: DataItem = state match {
       case Some(x: DataItem) => x
-      case _ => DataItem.create(null)
+      case _ => DataItem.create()
     }
 
     values.foreach(value => {
@@ -60,14 +62,14 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   def track(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    val trackedList: List[Any] = state.get[List[String]](new ItemPath(si.destination)) match {
+    val trackedList: List[Any] = state.get[List[String]](si.destination_path) match {
       case Some(x) => x
       case _       => List[Any]()
     }
 
-    value.get[String](new ItemPath(si.source)) match {
+    value.get[String](si.source_path) match {
       case Some(v) => {
-        state.put(new ItemPath(si.destination), v :: trackedList)
+        state.put(si.destination_path, v :: trackedList)
       }
 
       case _ => None
@@ -81,5 +83,6 @@ case class SumItem(val source: String,
                    val destination: String,
                    val function: String,
                    val retention: Int) {
-  val path = DataItem.toPathElements(source)
+  val source_path = new ItemPath(source)
+  val destination_path = new ItemPath(destination)
 }

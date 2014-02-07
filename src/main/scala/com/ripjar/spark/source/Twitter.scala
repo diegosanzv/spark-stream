@@ -33,7 +33,7 @@ class Twitter(val config: SourceConfig, val ssc: StreamingContext) extends Sourc
     println("Twitter stream requested")
 
     TwitterUtils.createStream(ssc, None).map(status => {
-      val item = DataItem.create(null)
+      val item = DataItem.create()
 
       item.put(statusPath, status.getText())
 

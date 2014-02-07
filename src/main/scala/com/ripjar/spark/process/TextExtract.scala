@@ -127,8 +127,8 @@ class TextExtract(config: InstanceConfig) extends Processor with Serializable {
 
     val result = extract(new ByteArrayInputStream(raw))
 
-    val metadata = DataItem.create(null)
-    val extras = DataItem.create(null)
+    val metadata = DataItem.create()
+    val extras = DataItem.create()
 
     result._2.map(mt => metadata.put(new ItemPath(mt._1), mt._2))
     result._3.map(mt => extras.put(new ItemPath(mt._1), mt._2))

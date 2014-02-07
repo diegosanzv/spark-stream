@@ -77,7 +77,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       rdd.filter( (p:(Int, String)) => {
         p._1 >= average
       }).map( (p: (Int, String)) => {
-        val item = DataItem.create(null)
+        val item = DataItem.create()
         item.put(new ItemPath(p._2), p._1)
 
         item

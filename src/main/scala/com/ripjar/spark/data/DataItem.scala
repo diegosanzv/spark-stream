@@ -32,17 +32,12 @@ trait DataItem extends Serializable {
 
 // container for a pre-parsed path object.
 class ItemPath(val key: String) extends Serializable {
-  var internal: Any = null
+  // for now we only have one representation
+  var internal: List[String] = key.split("\\.").toList
 }
 
 object DataItem {
   val logger = LoggerFactory.getLogger("DataObject")
-
-  val PATH_SEPARATOR = "\\."
-
-  def toPathElements(path: String): List[String] = {
-    path.split(PATH_SEPARATOR).toList
-  }
 
   def fromMap(mergeMap: Map[String, Any]): DataItem = {
     val di = new NestedDataItem
@@ -105,7 +100,7 @@ object DataItem {
   }
 
   def fromJava(jm: JMap[JString, JObject]): DataItem = {
-    val di = create(null)
+    val di = create()
     merge(di, jm)
     di
   }
@@ -157,10 +152,6 @@ object DataItem {
 object HashDataItem {
   val logger = LoggerFactory.getLogger("HashDataItem")
 
-  def makeItemPath(key: String) : List[String] = {
-    key.split("\\.").toList
-  }
-
   def fromMap(map: Map[String, Any]): DataItem = {
     map.foldLeft[HashDataItem](new HashDataItem(null))( (di, pair) => {
       val key: String = pair._1
@@ -209,10 +200,10 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
   def getRaw(): Array[Byte] = raw
 
   // convert to specific represenation of key
-  def get[T: ClassTag](key: ItemPath): Option[T] = get[T](HashDataItem.makeItemPath(key.key))
+  def get[T: ClassTag](key: ItemPath): Option[T] = get[T](key.internal)
 
   def put(key: ItemPath, value: Any) {
-    put(HashDataItem.makeItemPath(key.key), value)
+    put(key.internal, value)
   }
 
   def get[T: ClassTag](key: List[String]): Option[T] = {
@@ -255,7 +246,7 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
   }
 
   def remove(key: ItemPath): Option[Any] = {
-    remove(HashDataItem.makeItemPath(key.key))
+    remove(key.internal)
   }
 
   def remove(key: List[String]): Option[Any] = {
@@ -333,12 +324,8 @@ private class NestedDataItem() extends DataItem {
     valueMap.get(key)
   }
 
-  def getItem[T: ClassTag](key: String): Option[T] = {
-    getTyped[T](DataItem.toPathElements(key))
-  }
-
   def get[T: ClassTag](key: ItemPath): Option[T] = {
-    getTyped[T](DataItem.toPathElements(key.key))
+    getTyped[T](key.internal)
   }
 
   def putItem(key: String, value: Any) = {
@@ -419,10 +406,4 @@ private class NestedDataItem() extends DataItem {
   override def toString(): String = {
     new scala.util.parsing.json.JSONObject(valueMap.toMap).toString
   }
-
-  private def parsePath(path: String): (List[String], String) = {
-    val paths = path.split(DataItem.PATH_SEPARATOR)
-    (paths.slice(0, paths.length - 1).toList, paths(paths.length - 1))
-  }
-
 }

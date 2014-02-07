@@ -26,7 +26,7 @@ case class FilterConfig(val items: List[FilterConfigItem])
 case class FilterConfigItem(val field: String, val method: String, val condition: String = "")
 
 object Filter {
-  val path: List[String] = DataItem.toPathElements("tasks.filter")
+  val path: ItemPath = new ItemPath("tasks.filter")
 }
 
 class Filter(config: InstanceConfig) extends Processor with Serializable {
