@@ -17,6 +17,7 @@ import java.lang.{ Long => JLong }
 import java.lang.{ String => JString }
 import java.lang.{ Object => JObject }
 import scala.collection.parallel.mutable
+import scala.util.parsing.json.JSONFormat
 
 // all the DataItem representations must implement this trait.
 trait DataItem extends Serializable {
@@ -28,6 +29,9 @@ trait DataItem extends Serializable {
   def put(key: ItemPath, value: Any)
 
   def remove(key: ItemPath): Option[Any]
+
+  def toJSON() : String
+  override def toString() : String = toJSON
 }
 
 // container for a pre-parsed path object.
@@ -261,8 +265,29 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     }
   }
 
-  override def toString(): String = {
-    new scala.util.parsing.json.JSONObject(this.toMap).toString
+  private def formatter(value: Any): String = {
+    val def_format : JSONFormat.ValueFormatter = JSONFormat.defaultFormatter
+
+    if(value.isInstanceOf[DataItem]) {
+      value.asInstanceOf[DataItem].toJSON()
+    } else if(value.isInstanceOf[List[Any]]){
+      "[ " + value.asInstanceOf[List[Any]].map(formatter(_)).reduce( (s1, s2) => {
+        s1 + ", " + s2
+      }) + " ]"
+    } else {
+      def_format(value)
+    }
+  }
+
+  def toJSON(): String = {
+    "{ " + this.map( (pair: (String, Any)) => {
+      val key = pair._1
+      val value = pair._2
+
+      formatter(key) + ":" + formatter(value)
+    }).reduce( (s1, s2) => {
+      s1 + ", " + s2
+    }) + " }"
   }
 }
 
@@ -398,7 +423,7 @@ private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
     }
   }
 
-  override def toString(): String = {
+  def toJSON(): String = {
     new scala.util.parsing.json.JSONObject(valueMap.toMap).toString
   }
 }

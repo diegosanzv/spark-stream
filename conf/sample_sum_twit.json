@@ -135,7 +135,7 @@
                 {
                     "source": "dataset.tweet.text",
                     "destination": "tweet",
-                    "function": "stat",
+                    "function": "track",
                     "retention": 5
                 }
             ]
