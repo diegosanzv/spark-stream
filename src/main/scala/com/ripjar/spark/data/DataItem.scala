@@ -38,6 +38,10 @@ trait DataItem extends Serializable {
 class ItemPath(val key: String) extends Serializable {
   // for now we only have one representation
   var internal: List[String] = key.split("\\.").toList
+
+  override def toString() : String = {
+    key
+  }
 }
 
 object DataItem {
@@ -211,8 +215,19 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
       case Nil          => None // not found
       case head :: path => {
         get(head) match {
-          case Some(di: HashDataItem) => di.get(path) // recursively search
-          case Some(x: T)  => Some(x)
+          case Some(data) => {
+            if(data.isInstanceOf[HashDataItem]){
+              path match {
+                case Nil => Some(data.asInstanceOf[T])
+                case _   => data.asInstanceOf[HashDataItem].get[T](path)
+              }
+            } else if(data.isInstanceOf[T]) {
+              Some(data.asInstanceOf[T])
+            } else {
+              None
+            }
+          } // recursively search
+
           case _           => None
         }
       }
@@ -271,23 +286,33 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     if(value.isInstanceOf[DataItem]) {
       value.asInstanceOf[DataItem].toJSON()
     } else if(value.isInstanceOf[List[Any]]){
-      "[ " + value.asInstanceOf[List[Any]].map(formatter(_)).reduce( (s1, s2) => {
-        s1 + ", " + s2
-      }) + " ]"
+      val lst = value.asInstanceOf[List[Any]]
+
+      if(lst.length > 0) {
+        "[ " + lst.map(formatter(_)).reduce( (s1, s2) => {
+          s1 + ", " + s2
+        }) + " ]"
+      } else {
+        return "[ ]"
+      }
     } else {
       def_format(value)
     }
   }
 
   def toJSON(): String = {
-    "{ " + this.map( (pair: (String, Any)) => {
-      val key = pair._1
-      val value = pair._2
+    if(this.size == 0) {
+      "{ }"
+    } else {
+      "{ " + this.map( (pair: (String, Any)) => {
+        val key = pair._1
+        val value = pair._2
 
-      formatter(key) + ":" + formatter(value)
-    }).reduce( (s1, s2) => {
-      s1 + ", " + s2
-    }) + " }"
+        formatter(key) + ":" + formatter(value)
+      }).reduce( (s1, s2) => {
+        s1 + ", " + s2
+      }) + " }"
+    }
   }
 }
 

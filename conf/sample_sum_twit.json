@@ -50,7 +50,7 @@
             "id": "sample",
             "classname": "com.ripjar.spark.source.Filesystem",
             "parameters": {
-                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples"
+                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples/test"
             }
         }
     ],
@@ -133,9 +133,9 @@
 
             "data": [
                 {
-                    "source": "dataset.tweet.text",
+                    "source": "dataset.tweet.user.followers_count",
                     "destination": "tweet",
-                    "function": "track",
+                    "function": "stat",
                     "retention": 5
                 }
             ]
