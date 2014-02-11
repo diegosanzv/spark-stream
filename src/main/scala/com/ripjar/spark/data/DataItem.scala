@@ -34,10 +34,23 @@ trait DataItem extends Serializable {
   override def toString() : String = toJSON
 }
 
+object ItemPath {
+  type InternalPath = List[Either[String, (String, Int)]]
+}
+
 // container for a pre-parsed path object.
 class ItemPath(val key: String) extends Serializable {
   // for now we only have one representation
-  var internal: List[String] = key.split("\\.").toList
+  var internal: ItemPath.InternalPath = {
+    key.split("\\.").map( str => {
+      val name = str.split("[\\[\\]]")
+
+      name.length match {
+        case 1 => Left(name.head)
+        case 2 => Right( (name.head, name.last.toInt) )
+      }
+    }).toList
+  }
 
   override def toString() : String = {
     key
@@ -46,51 +59,6 @@ class ItemPath(val key: String) extends Serializable {
 
 object DataItem {
   val logger = LoggerFactory.getLogger("DataObject")
-
-  /*def fromMap(mergeMap: Map[String, Any]): DataItem = {
-    val di = new NestedDataItem
-    mergeMap.foreach(kv => {
-      kv._2 match {
-        case child: Map[String, Any] => di.put(kv._1, DataItem.fromMap(child))
-        case v: Boolean => di.put(kv._1, v)
-        case v: Long => di.put(kv._1, v)
-        case v: Double => di.put(kv._1, v)
-        case v: String => di.put(kv._1, v)
-        case v: Array[Boolean] => di.put(kv._1, new BooleanList(v.toList))
-        case v: Array[Long] => di.put(kv._1, new LongList(v.toList))
-        case v: Array[Double] => di.put(kv._1, new DoubleList(v.toList))
-        case v: List[Double] => di.put(kv._1, new DoubleList(v.toList))
-        case v: Array[String] => di.put(kv._1, new StringList(v.toList))
-        case v: List[Map[String, Any]] => di.put(kv._1, new DataItemList(v.map(x => DataItem.fromMap(x))))
-        case null => di.put(kv._1, "")
-
-        case x: Any => logger.warn(kv._1, kv._2, x.toString)
-        case d => throw new RuntimeException("Not implemented DataObject mapping from type: " + d)
-      }
-    })
-    di
-  }
-
-  // TODO: this whole parsing needs to be reimplemented by manual walking of the object.
-  def fromJson(json: String, template: DataItem = null, raw: Array[Byte] = null): DataItem = {
-    // Because JSON does not handle longs well
-    // TODO: probably need to do some proper parsing instead of this.
-    val myNum = { input : String =>
-      if(input.indexOf('.') > -1){
-        java.lang.Double.parseDouble(input)
-      } else {
-        java.lang.Long.parseLong(input)
-      }
-    }
-
-    scala.util.parsing.json.JSON.globalNumberParser = myNum
-    scala.util.parsing.json.JSON.perThreadNumberParser = myNum
-
-    scala.util.parsing.json.JSON.parseFull(json) match {
-      case (Some(map: Map[String, Any])) => fromMap(map)
-      case _ => new NestedDataItem
-    }
-  }*/
 
   def jsonToMap(json: String): Option[Any] = {
     val myNum = { input : String =>
@@ -150,7 +118,7 @@ object DataItem {
 
   def create(template: DataItem = null, raw: Array[Byte] = null): DataItem = {
     template match {
-      case di: NestedDataItem => new NestedDataItem(raw)
+      //case di: NestedDataItem => new NestedDataItem(raw)
       case di: HashDataItem => new HashDataItem(raw)
       case _ => new HashDataItem(raw)
     }
@@ -210,25 +178,52 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     put(key.internal, value)
   }
 
-  def get[T: ClassTag](key: List[String]): Option[T] = {
+  def get[T: ClassTag](key: ItemPath.InternalPath): Option[T] = {
     key match {
       case Nil          => None // not found
       case head :: path => {
-        get(head) match {
-          case Some(data) => {
-            if(data.isInstanceOf[HashDataItem]){
-              path match {
-                case Nil => Some(data.asInstanceOf[T])
-                case _   => data.asInstanceOf[HashDataItem].get[T](path)
+        head match {
+          case Left(hp) => {
+            get(hp) match {
+              case Some(data: HashDataItem) => {
+                path match {
+                  case Nil => Some(data.asInstanceOf[T])
+                  case _   => data.get[T](path)
+                }
               }
-            } else if(data.isInstanceOf[T]) {
-              Some(data.asInstanceOf[T])
-            } else {
-              None
-            }
-          } // recursively search
 
-          case _           => None
+              case Some(data: T) => {
+                Some(data)
+              }
+
+              case _           => None
+            }
+          }
+
+          case Right(indexed) => {
+            val (hpath, offset) = indexed
+
+            get(hpath) match {
+              case Some(lst: List[T]) => {
+                lst(offset) match {
+                  case data: HashDataItem => {
+                    path match {
+                      case Nil => Some(data.asInstanceOf[T])
+                      case _   => data.get[T](path)
+                    }
+                  }
+
+                  case data : T => {
+                    Some(data)
+                  }
+
+                  case _ => None
+                }
+              }
+
+              case _ => None
+            }
+          }
         }
       }
     }
@@ -241,21 +236,56 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     }
   }
 
-  def put(key: List[String], value: Any) {
+  def put(key: ItemPath.InternalPath, value: Any) {
     key match {
       case Nil => None
       case head :: Nil => {
-        put(head, value)
+        head match {
+          case Left(str) => put(str, value)
+          case Right(indexed) => {
+            val (hpath, offset) = indexed
+
+            put(hpath, get(hpath) match {
+              case Some(lst: List[Any]) => value :: lst
+              case _                    => List[Any](value)
+            })
+          }
+        }
       }
 
       case head :: path => {
-        val next = get(head) match {
-          case Some(di: HashDataItem) => di
-          case _ => new HashDataItem(null)
-        }
+        head match {
+          case Left(str) => {
+            val next = get(str) match {
+              case Some(di: HashDataItem) => di
+              case _ => new HashDataItem(null)
+            }
 
-        next.put(path, value)
-        put(head, value)
+            next.put(path, value)
+            put(str, value)
+          }
+
+          case Right(indexed) => {
+            val (hpath, offset) = indexed
+
+            put(hpath, get(hpath) match {
+              case Some(lst: List[Any]) => {
+                val newItem = new HashDataItem(null)
+
+                newItem.put(path, value)
+
+                newItem :: lst
+              }
+              case _                    => {
+                val newItem = new HashDataItem(null)
+
+                newItem.put(path, value)
+
+                List[Any](newItem)
+              }
+            })
+          }
+        }
       }
     }
   }
@@ -264,17 +294,52 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     remove(key.internal)
   }
 
-  def remove(key: List[String]): Option[Any] = {
+  def remove(key: ItemPath.InternalPath): Option[Any] = {
+    def dropIndex[T](xs: List[T], n: Int): List[T] = {
+      val (l1, l2) = xs splitAt n
+      l1 ::: (l2 drop 1)
+    }
+
     key match {
       case Nil         => None
       case head :: Nil => {
-        remove(head)
+        head match {
+          case Left(str) => remove(str)
+          case Right(indexed) => {
+            val (hpath, offset) = indexed
+
+            get(hpath) match {
+              case Some(lst: List[Any]) => {
+                val newList = dropIndex(lst, offset)
+                put(hpath, newList)
+
+                Some(lst)
+              }
+
+              case _ => None
+            }
+          }
+        }
       }
+
       case head :: path => {
-        get(head) match {
-          case Some(item: HashDataItem) => item.remove(path)
-          case Some(x) => remove(head)
-          case None    => None
+        head match {
+          case Left(str) => {
+            get(str) match {
+              case Some(item: HashDataItem) => item.remove(path)
+              case Some(x) => remove(str)
+              case None    => None
+            }
+          }
+
+          case Right(indexed) => {
+            val (hpath, offset) = indexed
+
+            get(hpath) match {
+              case Some(lst: List[Any]) => lst(offset).asInstanceOf[HashDataItem].remove(path)
+              case _ => None
+            }
+          }
         }
       }
     }
@@ -319,7 +384,7 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
 //TODO: This interface gives the sort of functionality I think we want but performance may be an issue
 // For now I'll leave as is 
 // Simple flattening may work ... but an area of complexity is getting items from a list a.b.c[3].d.e
-private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
+/*private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
 
   private val valueMap = new HashMap[String, Any]
 
@@ -451,4 +516,4 @@ private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
   def toJSON(): String = {
     new scala.util.parsing.json.JSONObject(valueMap.toMap).toString
   }
-}
+}*/
