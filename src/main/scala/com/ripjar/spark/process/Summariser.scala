@@ -19,6 +19,7 @@ import scala.reflect.ClassTag
  *
  */
 class Summariser(config: InstanceConfig) extends Processor with Serializable {
+  val max_age = config.getParameter("max_age", "5").toInt
   val key = new ItemPath(config.getMandatoryParameter("unique_key"))
   val summations = parseData(config.data)
 
@@ -30,11 +31,40 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
     val key_path = new ItemPath("key")
+    val age_path = new ItemPath("state_age")
 
     stream.map(item => {
       (item.getMandatory[String](key), item)
     }).updateStateByKey[DataItem]( (values: Seq[DataItem], state: Option[DataItem]) => {
-      updateState(values, state)
+      values.length match {
+        case 0 => {
+          // reduce age, if length is 0 then there must be a state
+          val state_val = state.get
+
+          val cur_age = state_val.getMandatory[java.lang.Integer](age_path).intValue()
+
+          if(cur_age == 0){
+            None
+          } else {
+            state_val.put(age_path, cur_age - 1)
+
+            Some(state_val)
+          }
+        }
+
+        case n => {
+          // we got stuff to update with, therefire reset age.
+          val newState = updateState(values, state)
+
+          newState.get.put(age_path, max_age)
+
+          newState
+        }
+      }
+    }).filter(pair => {
+      // we are keeping stuff around database is only interested in new or updated states
+      println("Log filtering: " + pair)
+      pair._2.getMandatory[java.lang.Integer](age_path) == max_age
     }).map(pair => {
       val item = pair._2
 
@@ -84,7 +114,7 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   def track(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    basic_summary[String, List[String]](si, value, state, (s_val, d_val) => {
+    basic_summary[Any, List[Any]](si, value, state, (s_val, d_val) => {
       (s_val :: d_val).take(si.retention)
     }, () => {
       List[String]()
@@ -92,14 +122,14 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   def set(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    basic_summary[String, List[String]](si, value, state, (s_val, d_val) => {
+    basic_summary[Any, List[Any]](si, value, state, (s_val, d_val) => {
       if(!d_val.contains(s_val)) {
         (s_val :: d_val).take(si.retention)
       } else {
         d_val
       }
     }, () => {
-      List[String]()
+      List[Any]()
     })
   }
 
@@ -109,31 +139,29 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   val minPath = new ItemPath("min")
 
   def stat(si: SumItem, value: DataItem, state: DataItem): DataItem = {
-    basic_summary[Number, DataItem](si, value, state, (src_val, d_val) => {
-      val s_val : Double = if(src_val.isInstanceOf[Double]) {
-        src_val.asInstanceOf[Double]
-      } else if(src_val.isInstanceOf[Long]) {
-        src_val.asInstanceOf[Long].toDouble
-      } else {
-        return d_val // unsupported type
+    basic_summary[Any, DataItem](si, value, state, (src_val, d_val) => {
+      val s_val : Double = src_val match {
+        case v : Double => v
+        case v : Long   => v.toDouble
+        case v          => return d_val // type not supported
       }
 
-      d_val.put(sumPath, d_val.get[Double](sumPath) match {
+      d_val.put(sumPath, d_val.get[java.lang.Double](sumPath) match {
         case Some(s) => s + s_val
         case _       => 0.0
       })
 
-      d_val.put(countPath, d_val.get[Int](countPath) match {
-        case Some(s: Int) => s + 1
+      d_val.put(countPath, d_val.get[java.lang.Integer](countPath) match {
+        case Some(s) => s + 1
         case _       => 0
       })
 
-      d_val.put(maxPath, d_val.get[Double](maxPath) match {
+      d_val.put(maxPath, d_val.get[java.lang.Double](maxPath) match {
         case Some(s) => Math.max(s, s_val)
         case _       => Double.MinValue
       })
 
-      d_val.put(minPath, d_val.get[Double](minPath) match {
+      d_val.put(minPath, d_val.get[java.lang.Double](minPath) match {
         case Some(s) => Math.min(s, s_val)
         case _       => Double.MaxValue
       })

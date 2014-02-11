@@ -196,7 +196,8 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
                 Some(data)
               }
 
-              case _           => None
+              case Some(d) => println(" actual type: " + d.getClass); None
+              case None => None
             }
           }
 
@@ -348,20 +349,18 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
   private def formatter(value: Any): String = {
     val def_format : JSONFormat.ValueFormatter = JSONFormat.defaultFormatter
 
-    if(value.isInstanceOf[DataItem]) {
-      value.asInstanceOf[DataItem].toJSON()
-    } else if(value.isInstanceOf[List[Any]]){
-      val lst = value.asInstanceOf[List[Any]]
-
-      if(lst.length > 0) {
-        "[ " + lst.map(formatter(_)).reduce( (s1, s2) => {
-          s1 + ", " + s2
-        }) + " ]"
-      } else {
-        return "[ ]"
+    value match {
+      case item: DataItem => item.toJSON()
+      case lst: List[Any] => {
+        if (lst.length > 0) {
+          "[ " + lst.map(formatter).reduce((s1, s2) => {
+            s1 + ", " + s2
+          }) + " ]"
+        } else {
+          "[ ]"
+        }
       }
-    } else {
-      def_format(value)
+      case v => def_format(v)
     }
   }
 

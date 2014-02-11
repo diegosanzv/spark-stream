@@ -81,6 +81,10 @@
         {
             "id": "elastic",
             "classname": "com.ripjar.spark.process.store.Elasticsearch"
+        },
+        {
+            "id": "mongo-store",
+            "classname": "com.ripjar.spark.process.store.Mongo"
         }
     ],
     "instances": [
@@ -99,6 +103,15 @@
             "processId": "trend_store",
             "parameters": {
                 "file": "trending"
+            }
+        },
+        {
+            "id": "mongo-store",
+            "processId": "mongo-store",
+            "parameters": {
+                "host": "localhost",
+                "db":   "sparkstore",
+                "collection": "sparkcoll"
             }
         },
         {
@@ -134,20 +147,17 @@
             "data": [
                 {
                     "source": "dataset.tweet.user.followers_count",
-                    "destination": "tweet",
+                    "destination": "friend_count",
                     "function": "stat",
                     "retention": 5
+                },
+                {
+                    "source": "dataset.tweet.user.name",
+                    "destination": "user_name",
+                    "function": "track",
+                    "retention": 1
                 }
             ]
-        },
-        {
-            "id": "elastic",
-            "processId": "elastic",
-            "parameters": {
-                "cluster": "localhost",
-                "index": "twitter",
-                "doctype": "tweet"
-            }
         }
     ],
     "flows": [
@@ -157,6 +167,8 @@
                 "sample",
                 "summarize",
                 "log",
+                "mongo-store",
+                "log2",
                 "kafka_trend_store"
             ]
         }

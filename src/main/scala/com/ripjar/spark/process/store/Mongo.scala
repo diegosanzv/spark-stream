@@ -1,4 +1,4 @@
-package com.ripjar.spark.process
+package com.ripjar.spark.process.store
 
 import com.ripjar.spark.data._
 import org.slf4j.Logger
@@ -12,6 +12,8 @@ import com.mongodb.WriteConcern
 import com.mongodb.DBCollection
 import com.mongodb.DBObject
 import com.mongodb.util.JSON
+import com.ripjar.spark.process.Processor
+import org.apache.spark.streaming.StreamingContext._
 
 /*
  * Used to store a stream in Mongo
@@ -56,7 +58,7 @@ object Mongo {
   }
 }
 
-class MongoConfig(val mongoHost: String, val mongoDbName: String, val mongoCollectionName: String, val connectionsPerHost: Int, val threadsAllowedToBlockForConnectionMultiplier: Int) {
+class MongoConfig(val mongoHost: String, val mongoDbName: String, val mongoCollectionName: String, val connectionsPerHost: Int, val threadsAllowedToBlockForConnectionMultiplier: Int) extends Serializable {
   val hash = mongoHost + ":" + mongoDbName + ":" + mongoCollectionName + ":" + connectionsPerHost + ":" + threadsAllowedToBlockForConnectionMultiplier
 }
 
@@ -70,7 +72,17 @@ class Mongo(config: InstanceConfig) extends Processor with Serializable {
     100)
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
-    stream.map(store(_))
+    stream.foreachRDD( rdd => {
+      rdd.foreachPartition(iter => {
+        iter.foreach( item => {
+          println("Log Saving: " + item)
+
+          store(item)
+        })
+      })
+    })
+
+    stream
   }
 
   def store(input: DataItem): DataItem = {
