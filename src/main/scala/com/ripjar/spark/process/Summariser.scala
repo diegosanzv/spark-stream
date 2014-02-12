@@ -63,7 +63,6 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
       }
     }).filter(pair => {
       // we are keeping stuff around database is only interested in new or updated states
-      println("Log filtering: " + pair)
       pair._2.getMandatory[java.lang.Integer](age_path) == max_age
     }).map(pair => {
       val item = pair._2

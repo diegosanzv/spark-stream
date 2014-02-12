@@ -75,8 +75,6 @@ class Mongo(config: InstanceConfig) extends Processor with Serializable {
     stream.foreachRDD( rdd => {
       rdd.foreachPartition(iter => {
         iter.foreach( item => {
-          println("Log Saving: " + item)
-
           store(item)
         })
       })
