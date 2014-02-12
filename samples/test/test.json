@@ -1,5 +1,5 @@
-{ "dataset": { "tweet": { "user": { "name": "name1", "id_str": "1", "followers_count": 1 } } }, "c": "1"}
-{ "dataset": { "tweet": { "user": { "name": "name2", "id_str": "1", "followers_count": 1 } } }, "c": "2" }
-{ "dataset": { "tweet": { "user": { "name": "name3", "id_str": "1", "followers_count": 1 } } }, "c": "3" }
-{ "dataset": { "tweet": { "user": { "name": "name4", "id_str": "1", "followers_count": 1 } } }, "c": "4" }
-{ "dataset": { "tweet": { "user": { "name": "name5", "id_str": "1", "followers_count": 1 } } }, "c": "5" }
+{ "dataset": { "tweet": { "text": "#a", "user": { "name": "name1", "id_str": "1", "followers_count": 1 } } }, "c": "1"}
+{ "dataset": { "tweet": { "text": "#a", "user": { "name": "name2", "id_str": "1", "followers_count": 1 } } }, "c": "2" }
+{ "dataset": { "tweet": { "text": "#a", "user": { "name": "name3", "id_str": "1", "followers_count": 1 } } }, "c": "3" }
+{ "dataset": { "tweet": { "text": "#a", "user": { "name": "name4", "id_str": "1", "followers_count": 1 } } }, "c": "4" }
+{ "dataset": { "tweet": { "text": "#a", "user": { "name": "name5", "id_str": "1", "followers_count": 1 } } }, "c": "5" }

@@ -78,7 +78,9 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
         p._1 >= average
       }).map( (p: (Int, String)) => {
         val item = DataItem.create()
-        item.put(new ItemPath(p._2), p._1)
+
+        item.put(new ItemPath("count"), p._1)
+        item.put(new ItemPath("tag"), p._2)
 
         item
       })

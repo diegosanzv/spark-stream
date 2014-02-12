@@ -30,6 +30,8 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
+    println("Log2 summarizer executed process")
+
     val key_path = new ItemPath("key")
     val age_path = new ItemPath("state_age")
 
@@ -147,22 +149,22 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
 
       d_val.put(sumPath, d_val.get[java.lang.Double](sumPath) match {
         case Some(s) => s + s_val
-        case _       => 0.0
+        case _       => s_val
       })
 
       d_val.put(countPath, d_val.get[java.lang.Integer](countPath) match {
         case Some(s) => s + 1
-        case _       => 0
+        case _       => 1
       })
 
       d_val.put(maxPath, d_val.get[java.lang.Double](maxPath) match {
         case Some(s) => Math.max(s, s_val)
-        case _       => Double.MinValue
+        case _       => s_val
       })
 
       d_val.put(minPath, d_val.get[java.lang.Double](minPath) match {
         case Some(s) => Math.min(s, s_val)
-        case _       => Double.MaxValue
+        case _       => s_val
       })
 
       d_val

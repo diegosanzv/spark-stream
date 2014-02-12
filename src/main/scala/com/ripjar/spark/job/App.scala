@@ -10,6 +10,7 @@ import com.ripjar.spark.process.{MultiProcessor, Processor}
 import com.ripjar.spark.source.Source
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import scala.util.Random
 
 case class AppConfig(configFile: File = new File("."), start: Boolean = false, stop: Boolean = false, name: String = "")
 
@@ -163,8 +164,6 @@ object App {
         current
       })
 
-      println(entries)
-
       entries
     }).foldLeft(Map[String, List[FlowEnt]]())( (map, entArr : Array[FlowEnt]) => {
       // add to map. To map where already in list.
@@ -176,34 +175,34 @@ object App {
       })
     })
 
-    // the flows are not merged into a graph.
+    // the flows are now merged into a graph.
     val flowEnds = mapFlows.mapValues(_.distinct).map( pair => {
       val name = pair._1
       val lst = pair._2
       val first = lst.head
 
-      if(lst.length > 1) {
-        val allPrev : List[String] = lst.flatMap(_.prev.map(_.name)).distinct
-        val allNext : List[String] = lst.flatMap(_.next.map(_.name)).distinct
+      val allPrev : List[String] = lst.flatMap(_.prev.map(_.name)).distinct
+      val allNext : List[String] = lst.flatMap(_.next.map(_.name)).distinct
 
-        first.next = allNext.map(name => {
-          mapFlows.get(name) match {
-            // because we know the first will be extracted/reused - see 'first' value.
-            case Some(flow) => flow.head
-          }
-        })
+      first.next = allNext.map(name => {
+        mapFlows.get(name) match {
+          // because we know the first will be extracted/reused - see 'first' value.
+          case Some(flow) => flow.head
+        }
+      })
 
-        first.prev = allPrev.map(name => {
-          mapFlows.get(name) match {
-            case Some(flow) => flow.head
-          }
-        })
-      }
+      first.prev = allPrev.map(name => {
+        mapFlows.get(name) match {
+          case Some(flow) => flow.head
+        }
+      })
 
       (name, first)
     }).filter(pair => {
       pair._2.next.length == 0
     }).mapValues(flowEnt => {
+      println("defined flow: " + flowEnt.chainString())
+
       flowEnt.getStream(stages)
     })
 
@@ -219,6 +218,18 @@ class FlowEnt(val name:String) {
   var next : List[FlowEnt] = List()
   var prev : List[FlowEnt] = List()
   var res_stream : DStream[DataItem] = null
+
+  def chainString(): String = {
+    if(prev.length == 0) {
+       name
+    } else if(prev.length == 1) {
+      prev.head.chainString() + " > " + name
+    } else {
+      "[" + prev.map(_.chainString).reduce[String]( (item1, item2) => {
+        item1 + ", " + item2
+      }) + "] > " + name
+    }
+  }
 
   override def toString():String = {
     "(" +
@@ -239,25 +250,25 @@ class FlowEnt(val name:String) {
 
   def getStream(instMap : Map[String, Any]) : DStream[DataItem] = {
     if(res_stream != null) {
-      return res_stream
+      res_stream
+    } else {
+      val proc = instMap.get(name) match {
+        case Some(p) => p
+        case _       => throw new SparkJobException("Flow " + name + " has not instance associated", SparkJobErrorType.InvalidConfig)
+      }
+
+      // build previous streams
+      val prevStreams = prev.map(p => {
+        p.getStream(instMap)
+      })
+
+      res_stream = prevStreams.length match {
+        case 0 => proc.asInstanceOf[Source].stream()
+        case 1 => proc.asInstanceOf[Processor].process(prevStreams.head)
+        case _ => proc.asInstanceOf[MultiProcessor].process(prevStreams.toArray)
+      }
+
+      res_stream
     }
-
-    val proc = instMap.get(name) match {
-      case Some(p) => p
-      case _       => throw new SparkJobException("Flow " + name + " has not instance associated", SparkJobErrorType.InvalidConfig)
-    }
-
-    // build previous streams
-    val prevStreams = prev.map(p => {
-      p.getStream(instMap)
-    })
-
-    res_stream = prevStreams.length match {
-      case 0 => proc.asInstanceOf[Source].stream()
-      case 1 => proc.asInstanceOf[Processor].process(prevStreams.head)
-      case _ => proc.asInstanceOf[MultiProcessor].process(prevStreams.toArray)
-    }
-
-    res_stream
   }
 }

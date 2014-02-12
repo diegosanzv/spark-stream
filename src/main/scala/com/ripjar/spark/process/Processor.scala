@@ -5,7 +5,7 @@ import org.apache.spark.streaming.dstream.DStream
 
 
 
-trait Processor {
+trait Processor extends Serializable {
 
   def process(stream: DStream[DataItem]): DStream[DataItem]
 }
