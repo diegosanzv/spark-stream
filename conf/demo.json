@@ -12,7 +12,6 @@
     },
 
     "system": {
-    	"test": "test",
     	"client": "client_key",
     	"api": "api_key",
         "id": "test-routes",

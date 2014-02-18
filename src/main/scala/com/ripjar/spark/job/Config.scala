@@ -92,10 +92,7 @@ case class StreamConfig(
   val flows: Array[FlowConfig],
   val sources: Array[SourceConfig]) {}
 
-case class SystemConfig(val client: String,
-                        val api: String,
-                        val id: String,
-                        val task_name: String,
+case class SystemConfig(val task_name: String,
                         val spark_master: String,
                         val spark_home: String,
                         val stream_duration: Int,
