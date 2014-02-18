@@ -113,32 +113,6 @@ object App {
       map ++ Map(item._1.id -> item._2)
     })
 
-    // connect all the flows together
-    /*config.flows.foreach(flow => {
-      val seq = flow.sequence.map(id => {
-        stages.get(id) match {
-          case Some(xid) => xid
-          case _ => throw new SparkJobException("Cannot find a process with id %s, required for flow.".format(id), SparkJobErrorType.InvalidConfig)
-        }
-      }).toList
-
-      val sourceStream = seq.head.asInstanceOf[Source].stream()
-
-      logger.info("Source: " + seq.head + " stream " + sourceStream)
-
-      // first should always be a Source object
-      seq.tail.foldLeft[DStream[DataItem]](sourceStream)((stream: DStream[DataItem], inst) => {
-        logger.info("Next: " + inst + " on " + stream)
-
-        val ret = inst.asInstanceOf[Processor].process(stream)
-
-        logger.info("Returned: " + ret)
-
-        ret
-      })
-    })*/
-
-
     // work  in progress, don't delete
     // produce disjoint flow map (branches are separate strands)
     val mapFlows = config.flows.map(flow => {

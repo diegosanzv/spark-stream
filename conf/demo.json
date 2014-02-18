@@ -1,0 +1,202 @@
+{
+    "loader": {
+        "classpath": [
+            "../../incubator-spark/examples/target/scala-2.10/spark-examples-assembly-0.9.0-incubating-SNAPSHOT.jar",
+            "target/scala-2.10/matchmaker-spark-process_2.10-1.0.0.jar",
+            "target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar",
+            "."
+        ],
+
+        "mainclass": "com.ripjar.spark.job.App",
+        "sparkhome": "../../incubator-spark"
+    },
+
+    "system": {
+    	"test": "test",
+    	"client": "client_key",
+    	"api": "api_key",
+        "id": "test-routes",
+        "task_name": "tweet-print",
+        "spark_master": "local[2]",
+        "spark_home": "../../incubator-spark/",
+        "stream_duration": 1,
+        "jars": [
+        	"./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
+	    ]
+    },
+
+    "sources": [
+        {
+            "id": "twitter",
+            "classname": "com.ripjar.spark.source.Twitter",
+            "parameters": {
+                  "consumer_key": "K83RzMLoQMzZJ8rvz3eyjg",
+                  "consumer_secret": "rzrg8kSratsl8mic4higLHgnbUEqYfuGLANRLjLjWU",
+                  "access_token": "1013455706-RvN82iUMpnuzwpNVflgfw9cz7NtSJ3JybTLr4lB",
+                  "access_token_secret": "5lG7wWw9ekOHiOrK7BvMa0t2bLiA0nMVrlx806pHsc"
+            }
+        },
+        {
+            "id": "kafka",
+            "classname": "com.ripjar.spark.source.Kafka",
+            "parameters": {
+                "topics": "route.node_tea",
+                "group": "route.node_tea",
+                "zkQuorum": "192.81.209.163:2181",
+                "numThreads": "2",
+                "binary": "false"
+            }
+        },
+        {
+            "id": "kafka-tweet",
+            "classname": "com.ripjar.spark.source.Kafka",
+            "parameters": {
+                "topics": "route.node_test.1",
+                "group": "test.1",
+                "zkQuorum": "192.81.209.163:2181",
+                "numThreads": "2",
+                "binary": "false"
+            }
+        },
+        {
+            "id": "sample",
+            "classname": "com.ripjar.spark.source.Filesystem",
+            "parameters": {
+                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples/test"
+            }
+        }
+    ],
+    "processors": [
+        {
+            "id": "trend",
+            "classname": "com.ripjar.spark.process.Trending",
+            "parameters": {
+                "input": "dataset.tweet.text"
+            }
+        },
+        {
+            "id": "file_store",
+            "classname": "com.ripjar.spark.process.store.File"
+        },
+        {
+            "id": "log",
+            "classname": "com.ripjar.spark.process.Log"
+        },
+        {
+            "id": "summarize",
+            "classname": "com.ripjar.spark.process.Summariser"
+        },
+        {
+            "id": "mongo-store",
+            "classname": "com.ripjar.spark.process.store.Mongo"
+        },
+        {
+            "id": "basic-joiner",
+            "classname": "com.ripjar.spark.process.BasicJoiner"
+        }
+    ],
+    "instances": [
+        {
+            "id": "trend",
+            "processId": "trend",
+            "parameters": {
+                "duration": "3600",
+                "slide_duration": "1",
+                "split_on": " ",
+                "match_on": "#"
+            }
+        },
+        {
+            "id": "mongo-store-summary",
+            "processId": "mongo-store",
+            "parameters": {
+                "host": "localhost",
+                "db":   "sparkstore",
+                "collection": "summary"
+            }
+        },
+        {
+            "id": "mongo-store-trending",
+            "processId": "mongo-store",
+            "parameters": {
+                "host": "localhost",
+                "db":   "sparkstore",
+                "collection": "trending"
+            }
+        },
+        {
+            "id": "basic-joiner",
+            "processId": "basic-joiner"
+        },
+        {
+            "id": "log",
+            "processId": "log",
+            "parameters": {
+                "tag": "joined"
+            }
+        },
+        {
+            "id": "log2",
+            "processId": "log"
+        },
+        {
+            "id": "log3",
+            "processId": "log"
+        },
+        {
+            "id": "file_store",
+            "processId": "file_store",
+            "parameters": {
+                "file": "kafka_trending"
+            }
+        },
+        {
+            "id": "summarize",
+            "processId": "summarize",
+            "parameters": {
+                "unique_key": "dataset.tweet.user.id_str"
+            },
+
+            "data": [
+                {
+                    "source": "dataset.tweet.user.followers_count",
+                    "destination": "friend_count",
+                    "function": "stat",
+                    "retention": 5
+                },
+                {
+                    "source": "dataset.tweet.user.name",
+                    "destination": "user_name",
+                    "function": "track",
+                    "retention": 1
+                }
+            ]
+        }
+    ],
+    "flows": [
+       {
+            "id": "summarizing_flow",
+            "sequence": [
+                "kafka-tweet",
+                "summarize",
+                "mongo-store-summary",
+                "log2",
+                "basic-joiner",
+                "log",
+                "file_store"
+            ]
+       },
+       {
+           "id": "trending_flow",
+           "sequence": [
+               "kafka-tweet",
+               "trend",
+               "mongo-store-trending",
+               "log3",
+               "basic-joiner",
+               "log",
+               "file_store"
+           ]
+      }
+   ]
+}
