@@ -12,10 +12,7 @@
     },
 
     "system": {
-    	"client": "client_key",
-    	"api": "api_key",
-        "id": "test-routes",
-        "task_name": "tweet-print",
+    	"task_name": "tweet-print",
         "spark_master": "local[2]",
         "spark_home": "../../incubator-spark/",
         "stream_duration": 1,
