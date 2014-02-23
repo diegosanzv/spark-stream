@@ -5,6 +5,7 @@ import com.ripjar.spark.data._
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.dstream.DStream
+import org.apache.spark.rdd.RDD
 
 /*
  * Performs trending on the stream
@@ -30,15 +31,63 @@ import org.apache.spark.streaming.dstream.DStream
  */
 class Trending(config: InstanceConfig) extends Processor with Serializable {
 
-  val inputPath = new ItemPath(config.getMandatoryParameter("input"))
+  val inputPath = new ItemPath(config.getParameter("input", "dataset.tweet.entities.hashtags"))
   val duration = config.getMandatoryParameter("duration").toInt
   val slide_duration = config.getMandatoryParameter("slide_duration").toInt
+  val min_count = config.getParameter("min_count", "2").toInt
 
   // defaulting on twitter.
   val splitOn = config.getParameter("split_on", " ")
   val matchOn = config.getParameter("match_on", "^#.*")
 
-  override def process(stream: DStream[DataItem]): DStream[DataItem] = {
+  override def process(stream: DStream[DataItem]): DStream[DataItem] = sliding_window(stream)
+
+  def sliding_window(stream: DStream[DataItem]) : DStream[DataItem] = {
+    val tag_indeces_path = new ItemPath("indices")
+    val tag_text_path = new ItemPath("text")
+    val count_path = new ItemPath("count")
+    val generation_path = new ItemPath("generation")
+
+    stream.filter( item => {
+      // confirm we have the tags
+      item.get[List[DataItem]](inputPath) match {
+        case Some(x) => x.length > 0
+        case None => false
+      }
+
+    }).flatMap( item => {
+      // Make the data items
+      item.getMandatory[List[DataItem]](inputPath).map(tag_item => {
+        tag_item.remove(tag_indeces_path)
+        tag_item.put(count_path, 1)
+
+        (tag_item.getMandatory[String](tag_text_path), tag_item)
+      })
+    }).reduceByKeyAndWindow( (di1: DataItem, di2: DataItem) => {
+      // forward reduction
+      di1.put(count_path, di1.getMandatory[Integer](count_path) + di2.getMandatory[Integer](count_path))
+
+      di1
+    }, (di1: DataItem, di2: DataItem) => {
+      // inverse reduction
+      di1.put(count_path, di1.getMandatory[Integer](count_path) - di2.getMandatory[Integer](count_path))
+
+      di1
+    }, Seconds (duration),
+       Seconds(slide_duration)).filter( (pair: (String, DataItem)) => {
+      pair._2.getMandatory[Integer](count_path) >= min_count
+    }).map( (pair: (String, DataItem)) => {
+      pair._2
+    }).transform( (rdd: RDD[DataItem], time: Time) => {
+      rdd.map( di => {
+        di.put(generation_path, time.milliseconds)
+
+        di
+      })
+    })
+  }
+
+  def slide_pair(stream: DStream[DataItem]): DStream[DataItem] = {
     stream.map(input => {
       // make sure the Strings are not empty
 
@@ -48,7 +97,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       }
     }).flatMap(status => {
       // Generate words
-      // TODO: Looks like twitter already gives us the tags at dataset.tweet.entities.hastags array
+      // TODO: Looks like twitter already gives us the tags at dataset.tweet.entities.hashtags array
 
       status.split(splitOn)
     }).filter(word => {
@@ -64,6 +113,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
 
       (t._2, t._1)
     }).transform(rdd => {
+      val generation = System.currentTimeMillis()
       var average = 0.0
 
       if(rdd.count() > 0) {
@@ -79,6 +129,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       }).map( (p: (Int, String)) => {
         val item = DataItem.create()
 
+        item.put(new ItemPath("generation"), generation)
         item.put(new ItemPath("count"), p._1)
         item.put(new ItemPath("tag"), p._2)
 

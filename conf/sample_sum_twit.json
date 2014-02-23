@@ -1,4 +1,16 @@
 {
+ "loader": {
+         "classpath": [
+             "target/scala-2.10/matchmaker-spark-process_2.10-1.0.0.jar",
+             "target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar",
+             "../../incubator-spark/examples/target/scala-2.10/spark-examples-assembly-0.9.0-incubating-SNAPSHOT.jar",
+             "."
+         ],
+
+         "mainclass": "com.ripjar.spark.job.App",
+         "sparkhome": "../../incubator-spark"
+     },
+
     "system": {
     	"test": "test",
     	"client": "client_key",
@@ -50,7 +62,7 @@
             "id": "sample",
             "classname": "com.ripjar.spark.source.Filesystem",
             "parameters": {
-                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples/test"
+                "dir": "/Users/mike/ripjar/orac/com.ripjar.spark.new/samples/twitter"
             }
         }
     ],
@@ -59,7 +71,7 @@
             "id": "trend",
             "classname": "com.ripjar.spark.process.Trending",
             "parameters": {
-                "input": "dataset.tweet.text"
+
             }
         },
         {
@@ -94,7 +106,7 @@
             "parameters": {
                 "duration": "3600",
                 "slide_duration": "1",
-                "split_on": " "
+                "split_on": " ",
                 "match_on": "#"
             }
         },
@@ -133,7 +145,7 @@
             "id": "enrich",
             "processId": "enrich",
             "parameters": {
-                "input": "tweet.text"
+                "input": "tweet.text",
                 "resources": "tweet.text"
             }
         },
@@ -165,10 +177,8 @@
             "id": "kafka_trending",
             "sequence": [
                 "sample",
-                "summarize",
+                "trend",
                 "log",
-                "mongo-store",
-                "log2",
                 "kafka_trend_store"
             ]
         }

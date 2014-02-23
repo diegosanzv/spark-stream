@@ -23,6 +23,7 @@ import scala.util.parsing.json.JSONFormat
 trait DataItem extends Serializable {
   def getRaw(): Array[Byte]
 
+  def contains[T: ClassTag](key: ItemPath) : Boolean
   def get[T: ClassTag](key: ItemPath): Option[T]
   def getMandatory[T: ClassTag](key: ItemPath): T
 
@@ -124,34 +125,31 @@ object DataItem {
     }
   }
 
+  def makeInsertable(item: Any): Any = {
+    item match {
+      case v: List[Any] => {
+        v.map(lst_item => {
+          makeInsertable(lst_item)
+        })
+      }
+      case v: Array[Any] => {
+        v.toList.map(lst_item => {
+          makeInsertable(lst_item)
+        })
+      }
+
+      case v: Map[String, Any] => fromMap(v)
+      case null => ""
+      case v => v
+    }
+  }
+
   def fromMap(map: Map[String, Any], template: DataItem = null, raw: Array[Byte] = null): DataItem = {
     map.foldLeft[DataItem](create(template, raw))( (di, pair) => {
       val key = new ItemPath(pair._1)
       val value: Any = pair._2
 
-      value match {
-        case child: Map[String, Any] => di.put(key, fromMap(child))
-        case v: Boolean => di.put(key, v)
-        case v: Long => di.put(key, v)
-        case v: Double => di.put(key, v)
-        case v: String => di.put(key, v)
-        case v: Array[Boolean] => di.put(key, v.toList)
-        case v: Array[Long] => di.put(key, v.toList)
-        case v: Array[Double] => di.put(key, v.toList)
-        case v: List[Double] => di.put(key, v.toList)
-        case v: Array[String] => di.put(key, v.toList)
-        case v: List[Map[String, Any]] => {
-          val items = v.map(obj => {
-            fromMap(obj)
-          })
-
-          di.put(key, items)
-        }
-        case null => di.put(key, "")
-
-        case x: Any => logger.warn(key.key, value, x.toString)
-        case d => throw new RuntimeException("Not implemented DataObject mapping from type: " + d)
-      }
+      di.put(key, makeInsertable(value))
 
       di
     })
@@ -178,6 +176,13 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     put(key.internal, value)
   }
 
+  def contains[T: ClassTag](key: ItemPath): Boolean = {
+    get[T](key) match {
+      case Some(x) => true
+      case None    => false
+    }
+  }
+
   def get[T: ClassTag](key: ItemPath.InternalPath): Option[T] = {
     key match {
       case Nil          => None // not found
@@ -196,7 +201,7 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
                 Some(data)
               }
 
-              case Some(d) => println(" actual type: " + d.getClass); None
+              case Some(d) => println(" actual type: " + d.getClass + " for path " + key); Thread.dumpStack(); None
               case None => None
             }
           }

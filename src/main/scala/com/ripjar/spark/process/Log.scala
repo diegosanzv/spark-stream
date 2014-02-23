@@ -14,15 +14,15 @@ object Log {
   val logger = LoggerFactory.getLogger(classOf[Log])
 }
 
-class Log(config: InstanceConfig) extends Processor with Serializable {
+class Log(config: InstanceConfig) extends TerminalProcessor with Serializable {
   val log_tag = config.getParameter("tag", "Log")
 
   override def process(input: DStream[DataItem]): DStream[DataItem] = {
-    input.map(print(_))
-  }
-
-  def print(input: DataItem): DataItem = {
-    Log.logger.info(log_tag + ">> " + input.toString)
+    input.foreachRDD( rdd => {
+      rdd.foreach(item => {
+        Log.logger.info(log_tag + ">> " + input.toString)
+      })
+    })
 
     input
   }
