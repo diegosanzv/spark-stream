@@ -31,7 +31,7 @@ import org.apache.spark.rdd.RDD
  */
 class Trending(config: InstanceConfig) extends Processor with Serializable {
 
-  val inputPath = new ItemPath(config.getParameter("input", "dataset.tweet.entities.hashtags"))
+  val inputPath = new ItemPath(config.getParameter("input", "tag"))
   val duration = config.getMandatoryParameter("duration").toInt
   val slide_duration = config.getMandatoryParameter("slide_duration").toInt
   val min_count = config.getParameter("min_count", "2").toInt
@@ -43,26 +43,21 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
   override def process(stream: DStream[DataItem]): DStream[DataItem] = sliding_window(stream)
 
   def sliding_window(stream: DStream[DataItem]) : DStream[DataItem] = {
-    val tag_indeces_path = new ItemPath("indices")
     val tag_text_path = new ItemPath("text")
     val count_path = new ItemPath("count")
     val generation_path = new ItemPath("generation")
 
     stream.filter( item => {
       // confirm we have the tags
-      item.get[List[DataItem]](inputPath) match {
+      item.get[String](inputPath) match {
         case Some(x) => x.length > 0
         case None => false
       }
-
-    }).flatMap( item => {
+    }).map( item => {
       // Make the data items
-      item.getMandatory[List[DataItem]](inputPath).map(tag_item => {
-        tag_item.remove(tag_indeces_path)
-        tag_item.put(count_path, 1)
+      item.put(count_path, 1)
 
-        (tag_item.getMandatory[String](tag_text_path), tag_item)
-      })
+      (item.getMandatory[String](tag_text_path), item)
     }).reduceByKeyAndWindow( (di1: DataItem, di2: DataItem) => {
       // forward reduction
       di1.put(count_path, di1.getMandatory[Integer](count_path) + di2.getMandatory[Integer](count_path))

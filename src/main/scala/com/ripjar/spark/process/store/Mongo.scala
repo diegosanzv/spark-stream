@@ -12,7 +12,7 @@ import com.mongodb.WriteConcern
 import com.mongodb.DBCollection
 import com.mongodb.DBObject
 import com.mongodb.util.JSON
-import com.ripjar.spark.process.Processor
+import com.ripjar.spark.process.{TerminalProcessor, Processor}
 import org.apache.spark.streaming.StreamingContext._
 
 /*
@@ -62,7 +62,7 @@ class MongoConfig(val mongoHost: String, val mongoDbName: String, val mongoColle
   val hash = mongoHost + ":" + mongoDbName + ":" + mongoCollectionName + ":" + connectionsPerHost + ":" + threadsAllowedToBlockForConnectionMultiplier
 }
 
-class Mongo(config: InstanceConfig) extends Processor with Serializable {
+class Mongo(config: InstanceConfig) extends TerminalProcessor with Serializable {
 
   val mongoConfig = new MongoConfig(
     config.getMandatoryParameter("host"),

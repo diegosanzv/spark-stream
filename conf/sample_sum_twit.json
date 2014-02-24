@@ -79,6 +79,10 @@
             "classname": "com.ripjar.spark.process.store.File"
         },
         {
+            "id": "twitter-tags",
+            "classname": "com.ripjar.spark.process.TwitterTagExtractor"
+        },
+        {
             "id": "log",
             "classname": "com.ripjar.spark.process.Log"
         },
@@ -131,10 +135,14 @@
             "processId": "log"
         },
         {
+            "id": "twitter-tags",
+            "processId": "twitter-tags"
+        },
+        {
             "id": "log2",
             "processId": "log"
         },
-       {
+        {
             "id": "kafka_trend_store",
             "processId": "trend_store",
             "parameters": {
@@ -177,9 +185,9 @@
             "id": "kafka_trending",
             "sequence": [
                 "sample",
+                "twitter-tags",
                 "trend",
-                "log",
-                "kafka_trend_store"
+                "log"
             ]
         }
    ]

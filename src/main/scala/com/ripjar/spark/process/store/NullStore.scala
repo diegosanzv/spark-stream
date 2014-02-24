@@ -3,7 +3,7 @@ package com.ripjar.spark.process.store
 import com.ripjar.spark.job.InstanceConfig
 import com.ripjar.spark.process.{TerminalProcessor, Processor}
 import org.apache.spark.streaming.dstream.DStream
-import com.ripjar.spark.data.DataItem
+import com.ripjar.spark.data.{ItemPath, DataItem}
 import org.slf4j.LoggerFactory
 
 /**

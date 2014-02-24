@@ -20,7 +20,7 @@ class Log(config: InstanceConfig) extends TerminalProcessor with Serializable {
   override def process(input: DStream[DataItem]): DStream[DataItem] = {
     input.foreachRDD( rdd => {
       rdd.foreach(item => {
-        Log.logger.info(log_tag + ">> " + input.toString)
+        Log.logger.info(log_tag + ">> " + item.toString)
       })
     })
 
