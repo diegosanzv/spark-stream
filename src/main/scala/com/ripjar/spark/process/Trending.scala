@@ -48,15 +48,12 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
 
     stream.filter( item => {
       // confirm we have the tags
-      item.get[String](inputPath) match {
-        case Some(x) => x.length > 0
-        case None => false
-      }
+      item.contains(inputPath)
     }).map( item => {
       // Make the data items
       item.put(count_path, 1)
 
-      (item.getMandatory[String](inputPath), item)
+      (item.getMandatory[Any](inputPath), item)
     }).reduceByKeyAndWindow( (di1: DataItem, di2: DataItem) => {
       // forward reduction
       di1.put(count_path, di1.getMandatory[Integer](count_path) + di2.getMandatory[Integer](count_path))
@@ -68,9 +65,9 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
 
       di1
     }, Seconds (duration),
-       Seconds(slide_duration)).filter( (pair: (String, DataItem)) => {
+       Seconds(slide_duration)).filter( (pair: (Any, DataItem)) => {
       pair._2.getMandatory[Integer](count_path) >= min_count
-    }).map( (pair: (String, DataItem)) => {
+    }).map( (pair: (Any, DataItem)) => {
       pair._2
     }).transform( (rdd: RDD[DataItem], time: Time) => {
       rdd.map( di => {

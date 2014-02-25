@@ -112,9 +112,10 @@
             "id": "tag-extractor",
             "processId": "transformer",
             "data": [
-                {"op": "filter", "filter_in": true, "paths": ["dataset.tweet.entities.hashtags"]},
+                {"op": "filter", "filter_in": true, "paths": ["dataset.tweet.entities.hashtags", "dataset.tweet.user.location"]},
                 {"op": "flatten", "path": "dataset.tweet.entities.hashtags"},
-                {"op": "move", "from":"dataset.tweet.entities.hashtags.text", "to":"tag"},
+                {"op": "move", "from":"dataset.tweet.entities.hashtags.text", "to":"tag.text"},
+                {"op": "move", "from":"dataset.tweet.user.location", "to":"tag.location"},
                 {"op": "filter", "filter_in": true, "paths": ["tag"]}
             ]
         },
@@ -124,8 +125,6 @@
             "parameters": {
                 "duration": "3600",
                 "slide_duration": "1",
-                "split_on": " ",
-                "match_on": "#",
                 "input": "tag"
             }
         },
