@@ -43,7 +43,6 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
   override def process(stream: DStream[DataItem]): DStream[DataItem] = sliding_window(stream)
 
   def sliding_window(stream: DStream[DataItem]) : DStream[DataItem] = {
-    val tag_text_path = new ItemPath("text")
     val count_path = new ItemPath("count")
     val generation_path = new ItemPath("generation")
 
@@ -57,7 +56,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
       // Make the data items
       item.put(count_path, 1)
 
-      (item.getMandatory[String](tag_text_path), item)
+      (item.getMandatory[String](inputPath), item)
     }).reduceByKeyAndWindow( (di1: DataItem, di2: DataItem) => {
       // forward reduction
       di1.put(count_path, di1.getMandatory[Integer](count_path) + di2.getMandatory[Integer](count_path))

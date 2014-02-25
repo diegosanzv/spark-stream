@@ -101,9 +101,23 @@
         {
             "id": "mongo-store",
             "classname": "com.ripjar.spark.process.store.Mongo"
+        },
+        {
+            "id": "transformer",
+            "classname": "com.ripjar.spark.process.Transform"
         }
     ],
     "instances": [
+        {
+            "id": "tag-extractor",
+            "processId": "transformer",
+            "data": [
+                {"op": "filter", "filter_in": true, "paths": ["dataset.tweet.entities.hashtags"]},
+                {"op": "flatten", "path": "dataset.tweet.entities.hashtags"},
+                {"op": "move", "from":"dataset.tweet.entities.hashtags.text", "to":"tag"},
+                {"op": "filter", "filter_in": true, "paths": ["tag"]}
+            ]
+        },
         {
             "id": "trend",
             "processId": "trend",
@@ -111,14 +125,8 @@
                 "duration": "3600",
                 "slide_duration": "1",
                 "split_on": " ",
-                "match_on": "#"
-            }
-        },
-        {
-            "id": "trend_store",
-            "processId": "trend_store",
-            "parameters": {
-                "file": "trending"
+                "match_on": "#",
+                "input": "tag"
             }
         },
         {
@@ -141,21 +149,6 @@
         {
             "id": "log2",
             "processId": "log"
-        },
-        {
-            "id": "kafka_trend_store",
-            "processId": "trend_store",
-            "parameters": {
-                "file": "kafka_trending"
-            }
-        },
-        {
-            "id": "enrich",
-            "processId": "enrich",
-            "parameters": {
-                "input": "tweet.text",
-                "resources": "tweet.text"
-            }
         },
         {
             "id": "summarize",
@@ -185,7 +178,7 @@
             "id": "kafka_trending",
             "sequence": [
                 "sample",
-                "twitter-tags",
+                "tag-extractor",
                 "trend",
                 "log"
             ]

@@ -21,6 +21,7 @@ import scala.util.parsing.json.JSONFormat
 
 // all the DataItem representations must implement this trait.
 trait DataItem extends Serializable {
+  def copy(): DataItem
   def getRaw(): Array[Byte]
 
   def contains[T: ClassTag](key: ItemPath) : Boolean
@@ -166,6 +167,24 @@ object DataItem {
 }
 
 private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] with DataItem {
+  private def copyElement(value: Any): Any = {
+    value match {
+      case d: DataItem => d.copy()
+      case d: List[Any] => d.map(copyElement)
+      case d => d
+    }
+  }
+
+  def copy(): DataItem = {
+    this.foldLeft[HashDataItem](DataItem.create(this).asInstanceOf[HashDataItem])( (newItem, valPair: (String, Any)) => {
+      val key = valPair._1
+      val value = copyElement(valPair._2)
+
+      newItem.put(key, value)
+
+      newItem
+    })
+  }
 
   def getRaw(): Array[Byte] = raw
 
@@ -268,7 +287,7 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
             }
 
             next.put(path, value)
-            put(str, value)
+            put(str, next)
           }
 
           case Right(indexed) => {
@@ -384,140 +403,3 @@ private class HashDataItem(val raw: Array[Byte]) extends HashMap[String, Any] wi
     }
   }
 }
-
-//TODO: This interface gives the sort of functionality I think we want but performance may be an issue
-// For now I'll leave as is 
-// Simple flattening may work ... but an area of complexity is getting items from a list a.b.c[3].d.e
-/*private class NestedDataItem(raw: Array[Byte] = null) extends DataItem {
-
-  private val valueMap = new HashMap[String, Any]
-
-  def getRaw(): Array[Byte] = raw
-
-  def getMap(): Map[String, Any] = {
-    valueMap.toMap
-  }
-
-  def put(key: String, value: List[Any]) = {
-    valueMap.put(key, value)
-  }
-
-  def put(key: String, value: DataList): Unit = {
-    valueMap.put(key, value)
-  }
-
-  def put(key: String, value: DataItem): Unit = {
-    valueMap.put(key, value)
-  }
-
-  def put(key: String, value: String): Unit = {
-    valueMap.put(key, value)
-  }
-  def put(key: String, value: Boolean): Unit = {
-    valueMap.put(key, value)
-  }
-  def put(key: String, value: Long): Unit = {
-    valueMap.put(key, value)
-  }
-  def put(key: String, value: Double): Unit = {
-    valueMap.put(key, value)
-  }
-  def put(key: String, value: DateTime): Unit = {
-    valueMap.put(key, value)
-  }
-
-  def remove(key: String): Unit = {
-    valueMap.remove(key)
-  }
-
-  def remove(key: ItemPath): Option[Any] = {
-    valueMap.remove(key.key)
-  }
-
-  def get(key: String): Option[Any] = {
-    valueMap.get(key)
-  }
-
-  def get[T: ClassTag](key: ItemPath): Option[T] = {
-    getTyped[T](key.internal)
-  }
-
-  def putItem(key: String, value: Any) = {
-    put(key, value.toString)
-  }
-
-  def put(key: ItemPath, value: Any) = {
-    put(key.key, value.toString)
-  }
-
-  def get(path: List[String]): Option[Any] = {
-    path match {
-      case h :: Nil => get(h)
-      case h :: t => get(h) match {
-        case Some(c: NestedDataItem) => c.get(t)
-        case _ => None
-      }
-      case _ => None
-    }
-  }
-
-  def getMandatory[T: ClassTag](key: ItemPath): T = {
-    get[T](key) match {
-      case Some(x: T) => x
-      case None => throw DataItemException("Field: '%s'.".format(key), DataItemErrorType.CannotFindMandatoryField)
-    }
-  }
-
-  def getMandatory(path: List[String]): Any = {
-    path match {
-      case h :: Nil => getMandatory(new ItemPath(h))
-      case h :: t => get(h) match {
-        case Some(c: NestedDataItem) => c.getMandatory(t)
-        case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
-      }
-      case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
-    }
-  }
-
-  def getTyped[T: ClassTag](key: String): Option[T] = {
-    valueMap.get(key) match {
-      case Some(v: T) => Some(v)
-      case Some(x) => {
-        DataItem.logger.warn("Found field '%s' of the wrong type: %s".format(key, x.getClass.getName()))
-        None
-      }
-      case None => None
-    }
-  }
-  def getTyped[T: ClassTag](path: List[String]): Option[T] = {
-    path match {
-      case Nil    => None
-      case h :: t => get(h) match {
-        case Some(subItem: NestedDataItem) => subItem.getTyped[T](t)
-        case Some(item: T) => Some(item)
-        case _ => None
-      }
-    }
-  }
-
-  def getMandatoryTyped[T: ClassTag](key: String): T = {
-    getTyped[T](key) match {
-      case Some(x) => x.asInstanceOf[T]
-      case None => throw DataItemException("Field: '%s'.".format(key), DataItemErrorType.CannotFindMandatoryField)
-    }
-  }
-  def getMandatoryTyped[T: ClassTag](path: List[String]): T = {
-    path match {
-      case h :: Nil => getMandatoryTyped[T](h)
-      case h :: t => get(h) match {
-        case Some(c: NestedDataItem) => c.getMandatoryTyped[T](t)
-        case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
-      }
-      case _ => throw DataItemException("Field: '%s'.".format(path.mkString), DataItemErrorType.CannotFindMandatoryField)
-    }
-  }
-
-  def toJSON(): String = {
-    new scala.util.parsing.json.JSONObject(valueMap.toMap).toString
-  }
-}*/
