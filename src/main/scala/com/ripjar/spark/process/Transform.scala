@@ -19,8 +19,10 @@ import org.json4s.DefaultFormats
  *     			{"op": "move", "from": "xxx", "to": "yyy"},
  *   			  {"op": "copy", "from": "xxx", "to": "yyy"}
  *   			  {"op": "filter", "filter_in": true, "paths": ["path list"]}
- *   			  {"op": "delete", "paths": ["path list"]
- *   			  {"op": "flatten": "path"}
+ *   			  {"op": "delete", "paths": ["path list"]}
+ *   			  {"op": "flatten", "path": "path.path"}
+ *   			  {"op": "str_join", "path": "path to list", "separator": "separator"}
+ *   			  {"op": "str_split", "path": "path to string", "regex": "split on this"}
  *      ]
  *
  */
@@ -39,6 +41,8 @@ class Transform(config: InstanceConfig) extends Processor with Serializable {
             case "flatten" => opItem.extract[Flatten]
             case "filter" => opItem.extract[TransFilter]
             case "delete" => opItem.extract[Delete]
+            case "str_split" => opItem.extract[SplitStr]
+            case "str_join" => opItem.extract[JoinStr]
             case str => throw new SparkJobException("Unsupported transformation operation: " + str, SparkJobErrorType.InvalidConfig)
           }
         })
@@ -167,6 +171,36 @@ case class Delete(paths: List[String]) extends Transformer {
       item_paths.foreach(path => {
         item.remove(path)
       })
+
+      item
+    })
+  }
+}
+
+case class SplitStr(path: String, regex: String) extends Transformer {
+  val split_path = new ItemPath(path)
+
+  override def apply(items: List[DataItem]): List[DataItem] = {
+    items.map(item => {
+      item.get[String](split_path) match {
+        case Some(str) => item.put(split_path, str.split(regex).toList)
+        case None => {}
+      }
+
+      item
+    })
+  }
+}
+
+case class JoinStr(path: String, separator: String) extends Transformer {
+  val join_path = new ItemPath(path)
+
+  override def apply(items: List[DataItem]): List[DataItem] = {
+    items.map(item => {
+      item.get[List[String]](join_path) match {
+        case Some(lst: List[String]) => item.put(join_path, lst.mkString(separator))
+        case None => {}
+      }
 
       item
     })
