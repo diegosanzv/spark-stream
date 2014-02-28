@@ -1,5 +1,5 @@
 {
- "loader": {
+    "loader": {
          "classpath": [
              "target/scala-2.10/matchmaker-spark-process_2.10-1.0.0.jar",
              "target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar",
@@ -12,15 +12,11 @@
      },
 
     "system": {
-    	"test": "test",
-    	"client": "client_key",
-    	"api": "api_key",
-   	"id": "test-routes",
-   	"task_name": "tweet-print",
-   	"spark_master": "local",
- 	"spark_home": "../../incubator-spark/",
-   	"stream_duration": 1,
-  	"jars": [
+        "task_name": "tweet-print",
+        "spark_master": "local",
+        "spark_home": "../../incubator-spark/",
+        "stream_duration": 1,
+        "jars": [
         	"./target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar"
 	    ]
     },
@@ -69,10 +65,7 @@
     "processors": [
         {
             "id": "trend",
-            "classname": "com.ripjar.spark.process.Trending",
-            "parameters": {
-
-            }
+            "classname": "com.ripjar.spark.process.Trending"
         },
         {
             "id": "trend_store",
@@ -120,6 +113,15 @@
             ]
         },
         {
+            "id": "tag-summary-transformer",
+            "processId": "transformer",
+            "data": [
+                {"op": "filter", "filter_in": true, "paths": ["dataset.tweet.entities.hashtags", "dataset.tweet.user.name", "dataset.tweet.user.id_str"]},
+                {"op": "flatten", "path": "dataset.tweet.entities.hashtags"},
+                {"op": "move", "from": "dataset.tweet.entities.hashtags.text", "to": "tag"}
+            ]
+        },
+        {
             "id": "trend",
             "processId": "trend",
             "parameters": {
@@ -142,14 +144,14 @@
             "processId": "log"
         },
         {
-            "id": "twitter-tags",
-            "processId": "twitter-tags"
-        },
-        {
             "id": "log2",
             "processId": "log"
         },
         {
+            "id": "log3",
+            "processId": "log"
+        },
+         {
             "id": "summarize",
             "processId": "summarize",
             "parameters": {
@@ -170,6 +172,21 @@
                     "retention": 1
                 }
             ]
+        },
+        {
+            "id": "tag-summariser",
+            "processId": "summarize",
+            "parameters": {
+                "unique_key": "tag"
+            },
+            "data": [
+                {
+                    "source": "dataset.tweet.user",
+                    "destination": "users",
+                    "function": "set",
+                    "retention": 20
+                }
+            ]
         }
     ],
     "flows": [
@@ -180,6 +197,15 @@
                 "tag-extractor",
                 "trend",
                 "log"
+            ]
+        },
+        {
+            "id": "tag-sum",
+            "sequence": [
+                "sample",
+                "tag-summary-transformer",
+                "tag-summariser",
+                "log2"
             ]
         }
    ]

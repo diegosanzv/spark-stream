@@ -7,6 +7,8 @@ import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.twitter.TwitterUtils
 import com.typesafe.config.ConfigFactory
+import twitter4j.Status
+import twitter4j.json.DataObjectFactory
 
 /*
 
@@ -19,7 +21,7 @@ import com.typesafe.config.ConfigFactory
 
  */
 
-class Twitter(config: SourceConfig, ssc: StreamingContext) extends Source {
+class Twitter(config: SourceConfig, @transient ssc: StreamingContext) extends Source {
 
   val logger = LoggerFactory.getLogger("TwitterSource")
   val statusPath = new ItemPath("status")
@@ -30,14 +32,10 @@ class Twitter(config: SourceConfig, ssc: StreamingContext) extends Source {
   System.setProperty("twitter4j.oauth.accessTokenSecret", config.getMandatoryParameter("access_token_secret"))
 
   def stream(): DStream[DataItem] = {
-    println("Twitter stream requested")
+    TwitterUtils.createStream(ssc, None).map((status: Status) => {
+      val json = DataObjectFactory.getRawJSON(status)
 
-    TwitterUtils.createStream(ssc, None).map(status => {
-      val item = DataItem.create()
-
-      item.put(statusPath, status.getText())
-
-      item
+      DataItem.fromJSON(json)
     })
   }
 }

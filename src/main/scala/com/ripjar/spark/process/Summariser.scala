@@ -20,7 +20,9 @@ import scala.reflect.ClassTag
  */
 class Summariser(config: InstanceConfig) extends Processor with Serializable {
   val max_age = config.getParameter("max_age", "5").toInt
-  val key = new ItemPath(config.getMandatoryParameter("unique_key"))
+  val unique_key = config.getMandatoryParameter("unique_key")
+  val key = new ItemPath(unique_key)
+  val key_path = new ItemPath(config.getParameter("output_key", unique_key))
   val summations = parseData(config.data)
 
   private def parseData(data: JValue): Array[SumItem] = {
@@ -30,13 +32,12 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
   }
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = {
-    println("Log2 summarizer executed process")
-
-    val key_path = new ItemPath("key")
     val age_path = new ItemPath("state_age")
 
-    stream.map(item => {
-      (item.getMandatory[String](key), item)
+    stream.filter(item => {
+      item.contains[Any](key)
+    }).map(item => {
+      (item.getMandatory[Any](key), item)
     }).updateStateByKey[DataItem]( (values: Seq[DataItem], state: Option[DataItem]) => {
       values.length match {
         case 0 => {
@@ -55,7 +56,7 @@ class Summariser(config: InstanceConfig) extends Processor with Serializable {
         }
 
         case n => {
-          // we got stuff to update with, therefire reset age.
+          // we got stuff to update with, therefore reset age.
           val newState = updateState(values, state)
 
           newState.get.put(age_path, max_age)

@@ -44,7 +44,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
 
     stream.filter( item => {
       // confirm we have the tags
-      item.contains(inputPath)
+      item.contains[Any](inputPath)
     }).map( item => {
       // Make the data items
       item.put(count_path, 1)
