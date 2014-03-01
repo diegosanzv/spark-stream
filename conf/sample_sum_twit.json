@@ -131,12 +131,28 @@
             }
         },
         {
-            "id": "mongo-store",
+            "id": "tag-trend-store",
             "processId": "mongo-store",
             "parameters": {
                 "host": "localhost",
                 "db":   "sparkstore",
-                "collection": "sparkcoll"
+                "collection": "tag_trends"
+            },
+
+            "data": {
+                "indices": {
+                    "name": "gen_count",
+                    "keys": ["generation", "count"]
+                }
+            }
+        },
+        {
+            "id": "tag-summary-store",
+            "processId": "mongo-store",
+            "parameters": {
+                "host": "localhost",
+                "db":   "sparkstore",
+                "collection": "tag_summary"
             }
         },
         {
@@ -151,7 +167,7 @@
             "id": "log3",
             "processId": "log"
         },
-         {
+        {
             "id": "summarize",
             "processId": "summarize",
             "parameters": {
@@ -191,12 +207,13 @@
     ],
     "flows": [
        {
-            "id": "kafka_trending",
+            "id": "tag-trending",
             "sequence": [
                 "sample",
                 "tag-extractor",
                 "trend",
-                "log"
+                "log",
+                "tag-trend-store"
             ]
         },
         {
@@ -205,7 +222,8 @@
                 "sample",
                 "tag-summary-transformer",
                 "tag-summariser",
-                "log2"
+                "log2",
+                "tag-summary-store"
             ]
         }
    ]
