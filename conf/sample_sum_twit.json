@@ -140,10 +140,9 @@
             },
 
             "data": {
-                "indices": {
-                    "name": "gen_count",
-                    "keys": ["generation", "count"]
-                }
+                "indices": [
+                    { "name": "gen_count", "keys": ["generation", "count"] }
+                ]
             }
         },
         {
