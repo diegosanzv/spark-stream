@@ -49,12 +49,12 @@ class Kafka(config: SourceConfig, ssc: StreamingContext) extends Source {
 
     if (isBinaryStream) {
       val stream: DStream[(String, Array[Byte])] = KafkaUtils.createStream[String, Array[Byte], StringDecoder, DefaultDecoder](ssc, kafkaParams, topicpMap, StorageLevel.MEMORY_ONLY_SER_2)
-      stream.map(input => {
+      stream.persist(StorageLevel.MEMORY_AND_DISK_SER).map(input => {
         Kafka.parseBinaryInput(input._2)
       })
     } else {
       val stream: DStream[(String, String)] = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](ssc, kafkaParams, topicpMap, StorageLevel.MEMORY_ONLY_SER_2)
-      stream.map(input => {
+      stream.persist(StorageLevel.MEMORY_AND_DISK_SER).map(input => {
         Kafka.parseTextInput(input._2)
       })
     }

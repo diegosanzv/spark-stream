@@ -55,6 +55,8 @@ object Mongo {
               obj.put(key, 1)
             })
 
+            println("creating index: " + index)
+
             collection.ensureIndex(obj, index.name)
           })
 
