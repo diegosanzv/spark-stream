@@ -35,6 +35,7 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
   val inputPath = new ItemPath(config.getParameter("input", "tag"))
   val duration = config.getMandatoryParameter("duration").toInt
   val slide_duration = config.getMandatoryParameter("slide_duration").toInt
+  val min_count = config.getParameter("min_count", "2").toInt
   val topn = config.getParameter("topn", "200").toInt
 
   override def process(stream: DStream[DataItem]): DStream[DataItem] = sliding_window(stream)
@@ -42,8 +43,6 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
   def sliding_window(stream: DStream[DataItem]) : DStream[DataItem] = {
     val count_path = new ItemPath("count")
     val generation_path = new ItemPath("generation")
-    val datePath = new ItemPath("dataset.tweet.created_at")
-    val dateParse = new java.text.SimpleDateFormat("EEE MMM d HH:mm:ss Z yyyy")
 
     stream.filter( item => {
       // confirm we have the tags
@@ -64,7 +63,9 @@ class Trending(config: InstanceConfig) extends Processor with Serializable {
 
       di1
     }, Seconds (duration),
-       Seconds(slide_duration)).map( (pair: (Any, DataItem)) => {
+       Seconds(slide_duration)).filter( (pair: (Any, DataItem)) => {
+      pair._2.getMandatory[Integer](count_path) >= min_count
+    }).map( (pair: (Any, DataItem)) => {
       (pair._2.getMandatory[Integer](count_path), pair._2)
     }).transform( (rdd: RDD[(Integer, DataItem)], time: Time) => {
       val top = rdd.sortByKey(ascending = false).map( pair => {
