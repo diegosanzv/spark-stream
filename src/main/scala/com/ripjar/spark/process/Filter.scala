@@ -77,23 +77,4 @@ class Filter(config: InstanceConfig) extends Processor with Serializable {
         }
     })
   }
-
- /* def filter(item: DataItem): Boolean = {
-    def test(fci: FilterConfigItem): Boolean = {
-      //TODO: Complete
-      true
-    }
-
-    val fliterConfig: FilterConfig = item.getTyped[DataItemList](Filter.path) match {
-      case Some(dil: DataItemList) => {
-        val additionalFilters: List[FilterConfigItem] = dil.value.map(di => {
-          new FilterConfigItem("", "", "")
-        })
-        val filters: List[FilterConfigItem] = defaultFlilterConfig.items ++ additionalFilters
-        new FilterConfig(filters)
-      }
-      case _ => filters
-    }
-    fliterConfig.items.forall(fci => { test(fci) })
-  }*/
 }
