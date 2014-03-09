@@ -1,10 +1,11 @@
 {
     "loader": {
          "classpath": [
-             "target/scala-2.10/matchmaker-spark-process_2.10-1.0.0.jar",
-             "target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar",
-             "../../incubator-spark/examples/target/scala-2.10/spark-examples-assembly-0.9.0-incubating-SNAPSHOT.jar",
-             "."
+	        "../com.ripjar.spark.modules/target/scala-2.10/matchmaker-spark-modules_2.10-1.0.0.jar",
+            "target/scala-2.10/matchmaker-spark-process_2.10-1.0.0.jar",
+            "target/scala-2.10/matchmaker-spark-process-assembly-1.0.0.jar",
+            "../../incubator-spark/examples/target/scala-2.10/spark-examples-assembly-0.9.0-incubating-SNAPSHOT.jar",
+            "."
          ],
 
          "mainclass": "com.ripjar.spark.job.App",
@@ -98,6 +99,14 @@
         {
             "id": "transformer",
             "classname": "com.ripjar.spark.process.Transform"
+        },
+        {
+            "id": "lang-detect",
+            "classname": "com.ripjar.module.LanguageDetection"
+        },
+        {
+            "id": "rare-words",
+            "classname": "com.ripjar.module.RareWords"
         }
     ],
     "instances": [
@@ -119,6 +128,14 @@
                 {"op": "filter", "filter_in": true, "paths": ["dataset.tweet.entities.hashtags", "dataset.tweet.user.name", "dataset.tweet.user.id_str"]},
                 {"op": "flatten", "path": "dataset.tweet.entities.hashtags"},
                 {"op": "move", "from": "dataset.tweet.entities.hashtags.text", "to": "tag"}
+            ]
+        },
+        {
+            "id": "make-words",
+            "processId": "transformer",
+            "data": [
+                {"op": "copy", "from": "dataset.tweet.text", "to": "text.words"},
+                {"op": "str_split", "path": "text.words", "regex": "\\s+"}
             ]
         },
         {
@@ -202,6 +219,23 @@
                     "retention": 20
                 }
             ]
+        },
+        {
+            "id": "lang-detect",
+            "processId": "lang-detect",
+            "parameters": {
+                "input": "dataset.tweet.text",
+                "output": "enrich.lang"
+            }
+        },
+        {
+            "id": "rare-words",
+            "processId": "rare-words",
+            "parameters": {
+                "input": "text.words",
+                "output": "text.rare_words",
+                "language_tag": "enrich.lang.language"
+            }
         }
     ],
     "flows": [
@@ -209,20 +243,10 @@
             "id": "tag-trending",
             "sequence": [
                 "sample",
-                "tag-extractor",
-                "trend",
-                "log",
-                "tag-trend-store"
-            ]
-        },
-        {
-            "id": "tag-sum",
-            "sequence": [
-                "sample",
-                "tag-summary-transformer",
-                "tag-summariser",
-                "log2",
-                "tag-summary-store"
+                "lang-detect",
+                "make-words",
+                "rare-words",
+                "log"
             ]
         }
    ]
