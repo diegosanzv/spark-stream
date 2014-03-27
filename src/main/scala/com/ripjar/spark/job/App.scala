@@ -113,7 +113,6 @@ object App {
       map ++ Map(item._1.id -> item._2)
     })
 
-    // work  in progress, don't delete
     // produce disjoint flow map (branches are separate strands)
     val mapFlows = config.flows.map(flow => {
       // produce a list of sources
