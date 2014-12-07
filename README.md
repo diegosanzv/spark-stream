@@ -16,3 +16,7 @@ The first video shows how the tool receives data from twitter, parses it using t
 On the next iteration I was able to set up a much more complex data flow. This video shows it can be set up. Notice the programatic style in how the modules can build up complex logic from simple building blocks. This file can be found in example configuration along with other setups.
 
 [![Showing configuration of a complex dataflow](http://img.youtube.com/vi/wXNv9BZxzMY/0.jpg)](http://www.youtube.com/watch?v=wXNv9BZxzMY)
+
+The final video is a demostration of a complex data flow where a single source is split into multiple flows. The streams are transformed and sent to different outputs to provide views to the user.
+
+[![Showing configuration of a complex dataflow](http://img.youtube.com/vi/74olub__RoU/0.jpg)](http://www.youtube.com/watch?v=74olub__RoU)
